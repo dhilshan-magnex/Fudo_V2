@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'database/database_helper.dart'; // adjust path to match where you saved db_helper.dart
-
+import 'database/db_manager.dart'; // adjust path to match where you saved db_helper.dart
+import 'home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,25 +11,48 @@ class LoginPage extends StatefulWidget {
 
 
 class _LoginPageState extends State<LoginPage> {
-  final _userIdController = TextEditingController();
+  final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoggingIn = false;
+  bool _obscurePassword = true;
 
   static const accentColor = Color(0xFF2D2D2D); // change to your brand color
 
   @override
   void dispose() {
-    _userIdController.dispose();
+    _userNameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
-    final isValid = await DBHelper.validateLogin(
-      _userIdController.text,
-      _passwordController.text,
+    final userName = _userNameController.text.trim();
+    final password = _passwordController.text;
+
+    if (userName.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter username and password'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoggingIn = true;
+    });
+
+    final isValid = await DBManager.validateLogin(
+      userName,
+      password,
     );
 
     if (!mounted) return;
+
+    setState(() {
+      _isLoggingIn = false;
+    });
 
     if (isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -37,6 +60,11 @@ class _LoginPageState extends State<LoginPage> {
           content: Text('Login Successful'),
           backgroundColor: Colors.green,
         ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,8 +75,6 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
-  bool _obscurePassword = true;
-  
 
   @override
   Widget build(BuildContext context) {
@@ -82,18 +108,19 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 60),
 
-                  // User ID
+                  // Username
                   SizedBox(
                     width: 280,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'User ID',
+                          'Username',
                           style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
                         TextField(
-                          controller: _userIdController,
+                          controller: _userNameController,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             enabledBorder: OutlineInputBorder(
@@ -126,6 +153,8 @@ class _LoginPageState extends State<LoginPage> {
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _isLoggingIn ? null : _handleLogin(),
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             enabledBorder: const OutlineInputBorder(
@@ -167,7 +196,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: SizedBox(
                         width: 120,
                         child: ElevatedButton(
-                          onPressed: _handleLogin,
+                          onPressed: _isLoggingIn ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentColor,
                             foregroundColor: Colors.white,
@@ -177,7 +206,7 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                           ),
-                          child: const Text('Login'),
+                          child: Text(_isLoggingIn ? 'Please wait' : 'Login'),
                         ),
                       ),
                     ),
@@ -212,9 +241,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             IconButton(
               icon: const Icon(Icons.settings_outlined),
-              onPressed: () {
-                print('settings tapped');
-              },
+              onPressed: () {},
             ),
           ],
         ),

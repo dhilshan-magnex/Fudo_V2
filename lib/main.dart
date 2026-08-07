@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'database/database_helper.dart'; // match your actual file name/path
-import 'database/sys_db_helper.dart';
+import 'database/db_manager.dart'; // match your actual file name/path
 import 'login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final db = await DBHelper.database;
-  final sysDb = await SysDBHelper.database;
+  final db = await DBManager.getDatabase(AppDatabase.fudo);
+  final sysDb = await DBManager.getDatabase(AppDatabase.sys);
 
   print("Database Connected!");
   print("Database Path: ${db.path}");
@@ -15,8 +14,6 @@ void main() async {
 
   runApp(const MyApp());
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
