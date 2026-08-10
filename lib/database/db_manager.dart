@@ -30,37 +30,12 @@ class DBManager {
         );
 
       case AppDatabase.sys:
-        return _openCreatedDatabase(
+        return _openAssetDatabase(
           fileName: 'Sys.db',
+          assetPath: 'assets/database/Sys.db',
           dbPath: dbPath,
-          onCreate: (db, version) async {
-            await db.execute('''
-              CREATE TABLE App_License (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                License_Key TEXT NOT NULL,
-                Is_Active INTEGER DEFAULT 1,
-                Expiry_Date TEXT,
-                Company_Name TEXT
-              )
-            ''');
-            await db.execute('''
-              CREATE TABLE System_Info (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Company_Name TEXT,
-                Address TEXT,
-                Contact_No TEXT,
-                Currency TEXT,
-                Tax_Rate REAL
-              )
-            ''');
-            await db.execute('''
-              CREATE TABLE Counter_Info (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Counter_Name TEXT,
-                Last_Invoice_No INTEGER DEFAULT 0
-              )
-            ''');
-          },
+          requiredTable: 'App_License',
+          requiredColumns: const ['Client_ID', 'Client_Name'],
         );
     }
   }
@@ -69,28 +44,50 @@ class DBManager {
     required String fileName,
     required String assetPath,
     required String dbPath,
+    String? requiredTable,
+    List<String> requiredColumns = const [],
   }) async {
     final path = join(dbPath, fileName);
     final exists = await databaseExists(path);
-    if (!exists) {
+
+    if (exists &&
+        requiredTable != null &&
+        !await _databaseHasColumns(path, requiredTable, requiredColumns)) {
+      await deleteDatabase(path);
+    }
+
+    if (!await databaseExists(path)) {
       await Directory(dirname(path)).create(recursive: true);
       final data = await rootBundle.load(assetPath);
-      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
       await File(path).writeAsBytes(bytes, flush: true);
     }
     return openDatabase(path);
   }
 
-  static Future<Database> _openCreatedDatabase({
-    required String fileName,
-    required String dbPath,
-    required Future<void> Function(Database, int) onCreate,
-  }) async {
-    final path = join(dbPath, fileName);
-    return openDatabase(path, version: 1, onCreate: onCreate);
+  static Future<bool> _databaseHasColumns(
+    String path,
+    String tableName,
+    List<String> columnNames,
+  ) async {
+    final db = await openDatabase(path, readOnly: true);
+    try {
+      final tableInfo = await db.rawQuery('PRAGMA table_info($tableName)');
+      final existingColumns = tableInfo
+          .map((column) => column['name']?.toString())
+          .whereType<String>()
+          .toSet();
+
+      return columnNames.every(existingColumns.contains);
+    } finally {
+      await db.close();
+    }
   }
 
-  // Generic fetch — all rows from any table in any database
+  // Generic fetch: all rows from any table in any database
   static Future<List<Map<String, dynamic>>> getTableData(
     AppDatabase dbType,
     String tableName,
@@ -108,6 +105,12 @@ class DBManager {
   }) async {
     final db = await getDatabase(dbType);
     return db.query(tableName, where: where, whereArgs: whereArgs);
+  }
+
+  static Future<Map<String, dynamic>?> getClientInfo() async {
+    final rows = await getTableData(AppDatabase.sys, 'App_License');
+    if (rows.isEmpty) return null;
+    return rows.first;
   }
 
   // ---- Fudo.db specific: auth ----

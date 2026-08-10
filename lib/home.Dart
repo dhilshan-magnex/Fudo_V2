@@ -1,7 +1,52 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+import 'database/db_manager.dart';
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final Future<Map<String, dynamic>?> _clientInfoFuture;
+  late DateTime _now;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _clientInfoFuture = DBManager.getClientInfo();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final year = dateTime.year.toString();
+    return '$day/$month/$year';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final second = dateTime.second.toString().padLeft(2, '0');
+    return '$hour:$minute:$second';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,28 +60,60 @@ class HomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Client Name: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('Log User: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('Client ID: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('Current Date: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('Time: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('Status: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                      Text('License valid: ', style: TextStyle(fontSize: 14)),
-                      SizedBox(height: 10),
-                    ],
+                  child: FutureBuilder<Map<String, dynamic>?>(
+                    future: _clientInfoFuture,
+                    builder: (context, snapshot) {
+                      final clientInfo = snapshot.data;
+                      final clientName =
+                          clientInfo?['Client_Name']?.toString() ?? '';
+                      final clientId =
+                          clientInfo?['Client_ID']?.toString() ?? '';
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Client Name: $clientName',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Log User: ',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Client ID: $clientId',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Current Date: ${_formatDate(_now)}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Time: ${_formatTime(_now)}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Status: ',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'License valid: ',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    },
                   ),
                 ),
 
-                // Right side — action buttons (stacked vertically)
+                // Right side: action buttons stacked vertically
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
