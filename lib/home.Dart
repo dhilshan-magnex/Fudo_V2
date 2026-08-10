@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'database/db_manager.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, required this.userName});
+
+  final String userName;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -61,9 +62,7 @@ class _HomePageState extends State<HomePage> {
 
             return SingleChildScrollView(
               padding: contentPadding,
-              child: useTwoColumns
-                  ? _landscapeLayout()
-                  : _portraitLayout(),
+              child: useTwoColumns ? _landscapeLayout() : _portraitLayout(),
             );
           },
         ),
@@ -114,7 +113,10 @@ class _HomePageState extends State<HomePage> {
               style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 10),
-            const Text('Log User: ', style: TextStyle(fontSize: 14)),
+            Text(
+              'Log User: ${widget.userName}',
+              style: const TextStyle(fontSize: 14),
+            ),
             const SizedBox(height: 10),
             Text('Client ID: $clientId', style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 10),
