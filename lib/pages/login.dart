@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'database/db_manager.dart'; // adjust path to match where you saved db_helper.dart
+import '../database/sqlite_class.dart';
 import 'home.dart';
 
 class LoginPage extends StatefulWidget {
@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
       _isLoggingIn = true;
     });
 
-    final isValid = await DBManager.validateLogin(
+    final isValid = await SQLiteClass.validateLogin(
       userName,
       password,
     );

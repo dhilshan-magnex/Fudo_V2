@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'database/db_manager.dart'; // match your actual file name/path
-import 'login.dart';
+import 'pages/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
