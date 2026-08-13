@@ -1,9 +1,19 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'database/db_manager.dart'; // match your actual file name/path
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'database/db_manager.dart';
 import 'pages/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize SQLite for Windows/Linux/macOS
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   final db = await DBManager.getDatabase(AppDatabase.fudo);
   final sysDb = await DBManager.getDatabase(AppDatabase.sys);
