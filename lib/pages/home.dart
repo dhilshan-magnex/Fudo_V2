@@ -76,6 +76,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Layout Design for portrait and landscape
   Widget _portraitLayout() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,6 +104,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Left side Column
   Widget _clientDetails() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _clientInfoFuture,
@@ -270,7 +272,8 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
-
+  
+  //Right Side Column
   Widget _actionButtons({required bool wrapButtons}) {
     final buttons = [
       HomeActionButton(icon: Icons.receipt_long, label: 'Billing', onTap: () {}),
