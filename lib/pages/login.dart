@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../database/sqlite_class.dart';
+import '../services/auth_service.dart';
 import 'home.dart';
 
 class LoginPage extends StatefulWidget {
@@ -11,6 +11,7 @@ class LoginPage extends StatefulWidget {
 
 
 class _LoginPageState extends State<LoginPage> {
+  final _authService = AuthService();
   final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoggingIn = false;
@@ -43,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
       _isLoggingIn = true;
     });
 
-    final isValid = await SQLiteClass.validateLogin(
+    final isValid = await _authService.validateLogin(
       userName,
       password,
     );
