@@ -1,0 +1,4 @@
+enum DataSource{
+  sqlite,
+  api,
+}

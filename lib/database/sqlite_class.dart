@@ -1,32 +1,49 @@
 import 'db_manager.dart';
+import 'data_source.dart';
+import 'data_source_manager.dart';
 
 class SQLiteClass {
-  static bool useSQLite = true;
-
   static Future<List<Map<String, dynamic>>> getTableData(
+    String clientId,
     AppDatabase dbType,
-    String tableName, 
+    String tableName,
   ) async {
-    if (useSQLite) {
+    final dataSource = DataSourceManager.getDataSource(clientId);
+
+    if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
-      return db.query(tableName);
+
+      return await db.query(tableName);
     }
 
-    return _getTableDataFromApi(dbType, tableName);
+    return await _getTableDataFromApi(
+      clientId,
+      dbType,
+      tableName,
+    );
   }
 
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
+    String clientId,
     AppDatabase dbType,
     String tableName, {
     required String where,
     required List<dynamic> whereArgs,
   }) async {
-    if (useSQLite) {
+    final dataSource = DataSourceManager.getDataSource(clientId);
+
+    if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
-      return db.query(tableName, where: where, whereArgs: whereArgs);
+
+      return await db.query(
+        tableName,
+        where: where,
+        whereArgs: whereArgs,
+      );
     }
 
-    return _getTableDataWhereFromApi(
+    return await _getTableDataWhereFromApi(
+      clientId,
       dbType,
       tableName,
       where: where,
@@ -35,18 +52,24 @@ class SQLiteClass {
   }
 
   static Future<List<Map<String, dynamic>>> _getTableDataFromApi(
+    String clientId,
     AppDatabase dbType,
     String tableName,
   ) async {
+    // Implement API request here
+
     return [];
   }
 
   static Future<List<Map<String, dynamic>>> _getTableDataWhereFromApi(
+    String clientId,
     AppDatabase dbType,
     String tableName, {
     required String where,
     required List<dynamic> whereArgs,
   }) async {
+    //Implement API request here
+
     return [];
   }
 }

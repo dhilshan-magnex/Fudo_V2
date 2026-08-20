@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/client_service.dart';
 import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -9,15 +10,17 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-
 class _LoginPageState extends State<LoginPage> {
   final _authService = AuthService();
+  final _clientService = ClientService();
+
   final _userNameController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoggingIn = false;
   bool _obscurePassword = true;
 
-  static const accentColor = Color(0xFF2D2D2D); // change to your brand color
+  static const accentColor = Color(0xFF2D2D2D);
 
   @override
   void dispose() {
@@ -44,36 +47,87 @@ class _LoginPageState extends State<LoginPage> {
       _isLoggingIn = true;
     });
 
-    final isValid = await _authService.validateLogin(
-      userName,
-      password,
-    );
+    try {
+      // Get client information from sys database -> App_License
+      final clientInfo = await _clientService.getClientInfo();
 
-    if (!mounted) return;
+      if (clientInfo == null) {
+        if (!mounted) return;
 
-    setState(() {
-      _isLoggingIn = false;
-    });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Client configuration not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
 
-    if (isValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login Successful'),
-          backgroundColor: Colors.green,
-        ),
+        return;
+      }
+
+      // Get Client_ID from App_License
+      final clientId =
+          (clientInfo['Client_ID'] ?? '').toString().trim();
+
+      if (clientId.isEmpty) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Client ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      final isValid = await _authService.validateLogin(
+        clientId,
+        userName,
+        password,
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomePage(userName: userName)),
-      );
-    } else {
+      if (!mounted) return;
+
+      if (isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login Successful'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HomePage(
+              userName: userName,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Username or Password Incorrect'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Username or Password Incorrect'),
+        SnackBar(
+          content: Text('Login failed: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoggingIn = false;
+        });
+      }
     }
   }
 
@@ -100,11 +154,16 @@ class _LoginPageState extends State<LoginPage> {
                       letterSpacing: 1,
                     ),
                   ),
+
                   const SizedBox(height: 4),
+
                   Text(
                     'Sign in to continue',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                    ),
                   ),
 
                   const SizedBox(height: 60),
@@ -117,15 +176,21 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const Text(
                           'Username',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
                         ),
+
                         TextField(
                           controller: _userNameController,
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
+                              borderSide: BorderSide(
+                                color: Colors.grey,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
@@ -149,24 +214,39 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const Text(
                           'Password',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
                         ),
+
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _isLoggingIn ? null : _handleLogin(),
+                          onSubmitted: (_) {
+                            if (!_isLoggingIn) {
+                              _handleLogin();
+                            }
+                          },
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
-                            enabledBorder: const OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
+
+                            enabledBorder:
+                                const OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.grey,
+                              ),
                             ),
-                            focusedBorder: const OutlineInputBorder(
+
+                            focusedBorder:
+                                const OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: accentColor,
                                 width: 2,
                               ),
                             ),
+
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
@@ -177,7 +257,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _obscurePassword = !_obscurePassword;
+                                  _obscurePassword =
+                                      !_obscurePassword;
                                 });
                               },
                             ),
@@ -189,7 +270,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 48),
 
-                  // Login button (right-aligned within the 280-width block)
+                  // Login button
                   SizedBox(
                     width: 280,
                     child: Align(
@@ -197,17 +278,25 @@ class _LoginPageState extends State<LoginPage> {
                       child: SizedBox(
                         width: 120,
                         child: ElevatedButton(
-                          onPressed: _isLoggingIn ? null : _handleLogin,
+                          onPressed:
+                              _isLoggingIn ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accentColor,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius:
+                                  BorderRadius.circular(6),
                             ),
                           ),
-                          child: Text(_isLoggingIn ? 'Please wait' : 'Login'),
+                          child: Text(
+                            _isLoggingIn
+                                ? 'Please wait'
+                                : 'Login',
+                          ),
                         ),
                       ),
                     ),
@@ -219,29 +308,43 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
 
-      // Bottom bar: company name + version (left), settings icon (right)
+      // Bottom bar
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 16,
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Company Name',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
                 Text(
                   'v1.0.0',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                  ),
                 ),
               ],
             ),
+
             IconButton(
-              icon: const Icon(Icons.settings_outlined),
+              icon: const Icon(
+                Icons.settings_outlined,
+              ),
               onPressed: () {},
             ),
           ],

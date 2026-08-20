@@ -3,20 +3,36 @@ import '../database/db_manager.dart';
 import '../database/sqlite_class.dart';
 
 class AuthService {
-  Future<bool> validateLogin(String userId, String password) async {
+  Future<bool> validateLogin(
+    String clientId,
+    String userId,
+    String password,
+  ) async {
+    final loginId = userId.trim();
+
     final result = await SQLiteClass.getTableDataWhere(
+      clientId,
       AppDatabase.fudo,
       'User_File',
-      where: '(User_ID = ? OR User_Name = ?) AND User_Active = ?',
-      whereArgs: [userId, userId, 1],
+      where: '''
+        (CAST(User_ID AS TEXT) = ? OR User_Name = ?)
+        AND User_Active = ?
+      ''',
+      whereArgs: [loginId, loginId, 1],
     );
 
-    if (result.isEmpty) return false;
+    if (result.isEmpty) {
+      return false;
+    }
 
-    final storedPassword = (result.first['User_Pwd'] ?? '').toString();
+    final storedPassword =
+        (result.first['User_Pwd'] ?? '').toString();
 
     if (_isBcryptHash(storedPassword)) {
-      return BCrypt.checkpw(password, storedPassword);
+      return BCrypt.checkpw(
+        password,
+        storedPassword,
+      );
     }
 
     return password == storedPassword;
