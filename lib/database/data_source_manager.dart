@@ -1,4 +1,7 @@
-import 'data_source.dart';
+enum DataSource {
+  sqlite,
+  api,
+}
 
 class DataSourceManager {
   static DataSource getDataSource(String clientId) {

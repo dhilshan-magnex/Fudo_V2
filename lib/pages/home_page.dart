@@ -7,9 +7,7 @@ import '../widgets/home/home_action_panel.dart';
 import '../widgets/layout.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.userName});
-
-  final String userName;
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -17,20 +15,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _clientService = ClientService();
-  late final Future<Map<String, dynamic>?> _clientInfoFuture;
+
+  late final Future<Map<String, dynamic>?>
+      _clientInfoFuture;
+
   late DateTime _now;
+
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _clientInfoFuture = _clientService.getClientInfo();
+
+    _clientInfoFuture =
+        _clientService.getClientInfo();
+
     _now = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        _now = DateTime.now();
-      });
-    });
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _now = DateTime.now();
+        });
+      },
+    );
   }
 
   @override
@@ -48,15 +59,24 @@ class _HomePageState extends State<HomePage> {
           ExitButton(),
         ],
       ),
+
       body: SafeArea(
         child: HomeLayout(
           primaryContent: ClientDetails(
-            clientInfoFuture: _clientInfoFuture,
-            userName: widget.userName,
+            clientInfoFuture:
+                _clientInfoFuture,
             currentDateTime: _now,
           ),
-          portraitSideContent: const HomeActionPanel(wrapButtons: false),
-          landscapeSideContent: const HomeActionPanel(wrapButtons: true),
+
+          portraitSideContent:
+              const HomeActionPanel(
+            wrapButtons: false,
+          ),
+
+          landscapeSideContent:
+              const HomeActionPanel(
+            wrapButtons: true,
+          ),
         ),
       ),
     );

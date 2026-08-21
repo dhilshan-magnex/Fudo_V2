@@ -3,13 +3,11 @@ import '../database/db_manager.dart';
 import '../database/sqlite_class.dart';
 
 class AuthService {
-  Future<bool> validateLogin(
+  Future<Map<String, dynamic>?> validateLogin(
     String clientId,
     String userId,
     String password,
   ) async {
-    final loginId = userId.trim();
-
     final result = await SQLiteClass.getTableDataWhere(
       clientId,
       AppDatabase.fudo,
@@ -18,24 +16,34 @@ class AuthService {
         (CAST(User_ID AS TEXT) = ? OR User_Name = ?)
         AND User_Active = ?
       ''',
-      whereArgs: [loginId, loginId, 1],
+      whereArgs: [userId.trim(), userId.trim(), 1],
     );
 
     if (result.isEmpty) {
-      return false;
+      return null;
     }
 
+    final user = result.first;
+
     final storedPassword =
-        (result.first['User_Pwd'] ?? '').toString();
+        (user['User_Pwd'] ?? '').toString();
+
+    bool passwordValid;
 
     if (_isBcryptHash(storedPassword)) {
-      return BCrypt.checkpw(
+      passwordValid = BCrypt.checkpw(
         password,
         storedPassword,
       );
+    } else {
+      passwordValid = password == storedPassword;
     }
 
-    return password == storedPassword;
+    if (!passwordValid) {
+      return null;
+    }
+
+    return user;
   }
 
   bool _isBcryptHash(String value) {

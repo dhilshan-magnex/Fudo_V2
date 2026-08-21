@@ -1,5 +1,4 @@
 import 'db_manager.dart';
-import 'data_source.dart';
 import 'data_source_manager.dart';
 
 class SQLiteClass {

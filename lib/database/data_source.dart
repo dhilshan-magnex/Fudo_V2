@@ -1,4 +1,0 @@
-enum DataSource{
-  sqlite,
-  api,
-}
