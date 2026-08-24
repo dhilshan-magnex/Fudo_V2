@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/client_service.dart';
 import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
-import '../widgets/home/home_action_panel.dart';
+import '../widgets/home_action_panel.dart';
 import '../widgets/layout.dart';
 
 class HomePage extends StatefulWidget {
