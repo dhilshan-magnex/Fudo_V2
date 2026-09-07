@@ -16,6 +16,46 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _clientService = ClientService();
 
+  final _homeButtons = [
+    HomeActionButton(
+      icon: Icons.receipt_long,
+      label: 'Billing',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.dashboard,
+      label: 'Dashboard',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.bar_chart,
+      label: 'Reports',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.point_of_sale,
+      label: 'POS Setting',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.switch_account,
+      label: 'Change User',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.lock_reset,
+      label: 'Change Password',
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.attach_money,
+      label: 'Cash Out',
+      onTap: _emptyAction,
+    ),
+  ];
+
+  static void _emptyAction() {}
+
   late final Future<Map<String, dynamic>?>
       _clientInfoFuture;
 
@@ -69,13 +109,15 @@ class _HomePageState extends State<HomePage> {
           ),
 
           portraitSideContent:
-              const HomeActionPanel(
-            wrapButtons: false,
+              HomeActionPanel(
+            wrapButtons: true,
+            buttons: _homeButtons,
           ),
 
           landscapeSideContent:
-              const HomeActionPanel(
+              HomeActionPanel(
             wrapButtons: true,
+            buttons: _homeButtons,
           ),
         ),
       ),

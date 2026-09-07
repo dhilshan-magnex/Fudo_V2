@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../session/session_provider.dart';
+import '../utils/global_colors.dart';
 import 'status_chip.dart';
 
 class ClientDetails extends StatelessWidget {
@@ -16,38 +17,38 @@ class ClientDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session =
-        context.watch<SessionProvider>();
+      context.watch<SessionProvider>();
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: clientInfoFuture,
 
       builder: (context, snapshot) {
-        final clientInfo = snapshot.data;
+      final clientInfo = snapshot.data;
 
-        final clientName =
-            session.clientName ??
-            clientInfo?['Client_Name']
-                ?.toString() ??
-            '';
+      final clientName =
+        session.clientName ??
+        clientInfo?['Client_Name']
+          ?.toString() ??
+        '';
 
-        final clientId =
-            session.clientId ??
-            clientInfo?['Client_ID']
-                ?.toString() ??
-            '';
+      final clientId =
+        session.clientId ??
+        clientInfo?['Client_ID']
+          ?.toString() ??
+        '';
 
-        final userName =
-            session.userName ?? '';
+      final userName =
+        session.userName ?? '';
 
-        final status =
-            clientInfo?['Status']
-                ?.toString() ??
-            '';
+      final status =
+        clientInfo?['Status']
+          ?.toString() ??
+        '';
 
-        final licenseValid =
-            clientInfo?['License_valid']
-                ?.toString() ??
-            '';
+      final licenseValid =
+        clientInfo?['License_valid']
+          ?.toString() ??
+        '';
 
         return Padding(
           padding:
@@ -59,49 +60,16 @@ class ClientDetails extends StatelessWidget {
                 CrossAxisAlignment.start,
 
             children: [
-              Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-
-                children: [
-                  Text(
-                    clientName.isEmpty
-                        ? 'Client Name'
-                        : clientName,
-
-                    maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-
-                    style: const TextStyle(
-                      color:
-                          Color(0xFF111827),
-                      fontSize: 16,
-                      fontWeight:
-                          FontWeight.w700,
-                    ),
-                  ),
-
-                  const SizedBox(height: 3),
-
-                  Text(
-                    clientId.isEmpty
-                        ? 'Client ID: -'
-                        : 'Client ID: $clientId',
-
-                    maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-
-                    style: const TextStyle(
-                      color:
-                          Color(0xFF6B7280),
-                      fontSize: 12,
-                      fontWeight:
-                          FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Center(
+                child: Text(
+                  clientName.isEmpty
+                      ? 'Client Name'
+                      : clientName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: GlobalColors.clientTitleTextStyle,
+                ),
               ),
 
               const Padding(
@@ -113,39 +81,50 @@ class ClientDetails extends StatelessWidget {
                 child: Divider(
                   height: 1,
                   thickness: 1,
-                  color:
-                      Color(0xFFE3E8EF),
+                    color: GlobalColors.divider,
                 ),
               ),
 
-              _InfoRow(
-                icon:
-                    Icons.person_outline,
-                label: 'Log User',
-                value: userName,
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoRow(
+                      icon: Icons.badge_outlined,
+                      label: 'Client ID',
+                      value: clientId,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _InfoRow(
+                      icon: Icons.person_outline,
+                      label: 'Log User',
+                      value: userName,
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 9),
 
-              _InfoRow(
-                icon:
-                    Icons.calendar_today_outlined,
-                label: 'Current Date',
-                value:
-                    _formatDate(
-                  currentDateTime,
-                ),
-              ),
-
-              const SizedBox(height: 9),
-
-              _InfoRow(
-                icon: Icons.access_time,
-                label: 'Time',
-                value:
-                    _formatTime(
-                  currentDateTime,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Date',
+                      value: _formatDate(currentDateTime),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _InfoRow(
+                      icon: Icons.access_time,
+                      label: 'Time',
+                      value: _formatTime(currentDateTime),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 9),
@@ -234,21 +213,14 @@ class _InfoRow extends StatelessWidget {
         Icon(
           icon,
           size: 14,
-          color:
-              const Color(0xFF6B7280),
+            color: GlobalColors.secondaryText,
         ),
 
         const SizedBox(width: 7),
 
         Text(
           label,
-          style: const TextStyle(
-            color:
-                Color(0xFF6B7280),
-            fontSize: 14,
-            fontWeight:
-                FontWeight.w500,
-          ),
+            style: GlobalColors.infoLabelTextStyle,
         ),
 
         const SizedBox(width: 12),
@@ -267,13 +239,7 @@ class _InfoRow extends StatelessWidget {
             overflow:
                 TextOverflow.ellipsis,
 
-            style: const TextStyle(
-              color:
-                  Color(0xFF111827),
-              fontSize: 12,
-              fontWeight:
-                  FontWeight.w700,
-            ),
+            style: GlobalColors.infoValueTextStyle,
           ),
         ),
       ],

@@ -29,10 +29,11 @@ class HomeLayout extends StatelessWidget {
   }
 
   Widget _portraitLayout() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: primaryContent),
+        primaryContent,
+        const SizedBox(height: 20),
         portraitSideContent,
       ],
     );
