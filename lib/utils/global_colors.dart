@@ -4,8 +4,13 @@ class GlobalColors {
 	static const primaryText = Color(0xFF111827);
 	static const secondaryText = Color(0xFF6B7280);
 	static const divider = Color(0xFFE3E8EF);
-	static const buttonText = Colors.black87;
 	static const buttonBackground = Color(0xFF80949E);
+
+	static Color buttonForeground(Color background) {
+		return background.computeLuminance() > 0.5
+			? Colors.black
+			: Colors.white;
+	}
 
 	static const buttonTextStyle = TextStyle(
 		fontSize: 14,
@@ -14,7 +19,7 @@ class GlobalColors {
 
 	static const clientTitleTextStyle = TextStyle(
 		color: primaryText,
-		fontSize: 16,
+		fontSize: 18,
 		fontWeight: FontWeight.w700,
 	);
 

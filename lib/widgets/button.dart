@@ -29,8 +29,8 @@ class HomeActionPanel extends StatelessWidget {
 
         if (wrapButtons) {
           return Wrap(
-            spacing: 14,
-            runSpacing: 12,
+            spacing: 13,
+            runSpacing: 13,
             alignment: WrapAlignment.start,
             children: sizedButtons,
           );
@@ -65,7 +65,9 @@ class HomeActionButton extends StatelessWidget {
         icon: Icon(icon, size: GlobalColors.buttonIconSize),
         label: Text(label),
         style: TextButton.styleFrom(
-          foregroundColor: GlobalColors.buttonText,
+          foregroundColor: GlobalColors.buttonForeground(
+            GlobalColors.buttonBackground,
+          ),
           backgroundColor: GlobalColors.buttonBackground,
           minimumSize: GlobalColors.buttonMinimumSize,
           padding: GlobalColors.buttonPadding,

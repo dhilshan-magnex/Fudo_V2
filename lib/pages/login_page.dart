@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/global_colors.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/client_service.dart';
@@ -343,7 +344,9 @@ class _LoginPageState extends State<LoginPage> {
                             backgroundColor:
                                 accentColor,
                             foregroundColor:
-                                Colors.white,
+                                GlobalColors.buttonForeground(
+                              accentColor,
+                            ),
                             elevation: 0,
                             padding:
                                 const EdgeInsets.symmetric(
