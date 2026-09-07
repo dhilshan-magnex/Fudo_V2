@@ -33,7 +33,7 @@ class HomeLayout extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         primaryContent,
-        const SizedBox(height: 20),
+        const SizedBox(height: 38),
         portraitSideContent,
       ],
     );
@@ -44,7 +44,7 @@ class HomeLayout extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: primaryContent),
-        const SizedBox(width: 24),
+        const SizedBox(width: 32),
         SizedBox(
           width: 336,
           child: Align(
