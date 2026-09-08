@@ -1,193 +1,134 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../session/session_provider.dart';
 import '../utils/global_colors.dart';
 import 'status_chip.dart';
 
 class ClientDetails extends StatelessWidget {
   const ClientDetails({
     super.key,
-    required this.clientInfoFuture,
+    required this.clientName,
+    required this.clientId,
+    required this.userName,
+    required this.status,
+    required this.licenseValid,
     required this.currentDateTime,
   });
 
-  final Future<Map<String, dynamic>?> clientInfoFuture;
+  final String clientName;
+  final String clientId;
+  final String userName;
+  final String status;
+  final String licenseValid;
   final DateTime currentDateTime;
 
   @override
   Widget build(BuildContext context) {
-    final session =
-      context.watch<SessionProvider>();
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
 
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: clientInfoFuture,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
 
-      builder: (context, snapshot) {
-      final clientInfo = snapshot.data;
+        children: [
+          Center(
+            child: Text(
+              clientName.isEmpty ? 'Client Name' : clientName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GlobalColors.clientTitleTextStyle,
+            ),
+          ),
 
-      final clientName =
-        session.clientName ??
-        clientInfo?['Client_Name']
-          ?.toString() ??
-        '';
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
 
-      final clientId =
-        session.clientId ??
-        clientInfo?['Client_ID']
-          ?.toString() ??
-        '';
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: GlobalColors.divider,
+            ),
+          ),
 
-      final userName =
-        session.userName ?? '';
-
-      final status =
-        clientInfo?['Status']
-          ?.toString() ??
-        '';
-
-      final licenseValid =
-        clientInfo?['License_valid']
-          ?.toString() ??
-        '';
-
-        return Padding(
-          padding:
-              const EdgeInsets.only(right: 12),
-
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
-
+          Row(
             children: [
-              Center(
-                child: Text(
-                  clientName.isEmpty
-                      ? 'Client Name'
-                      : clientName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: GlobalColors.clientTitleTextStyle,
+              Expanded(
+                child: _InfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Client ID',
+                  value: clientId,
                 ),
               ),
-
-              const Padding(
-                padding:
-                    EdgeInsets.symmetric(
-                  vertical: 12,
+              const SizedBox(width: 16),
+              Expanded(
+                child: _InfoRow(
+                  icon: Icons.person_outline,
+                  label: 'Log User',
+                  value: userName,
                 ),
-
-                child: Divider(
-                  height: 1,
-                  thickness: 1,
-                    color: GlobalColors.divider,
-                ),
-              ),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _InfoRow(
-                      icon: Icons.badge_outlined,
-                      label: 'Client ID',
-                      value: clientId,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _InfoRow(
-                      icon: Icons.person_outline,
-                      label: 'Log User',
-                      value: userName,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 9),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _InfoRow(
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Date',
-                      value: _formatDate(currentDateTime),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _InfoRow(
-                      icon: Icons.access_time,
-                      label: 'Time',
-                      value: _formatTime(currentDateTime),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 9),
-
-              StatusChip(
-                label: 'Status',
-                value: status,
-              ),
-
-              const SizedBox(height: 9),
-
-              StatusChip(
-                label: 'License valid',
-                value: licenseValid,
               ),
             ],
           ),
-        );
-      },
+
+          const SizedBox(height: 9),
+
+          Row(
+            children: [
+              Expanded(
+                child: _InfoRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Date',
+                  value: _formatDate(currentDateTime),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _InfoRow(
+                  icon: Icons.access_time,
+                  label: 'Time',
+                  value: _formatTime(currentDateTime),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 9),
+
+          Row(
+            children: [
+              Expanded(
+                child: StatusChip(label: 'Status', value: status),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: StatusChip(
+                  label: 'License valid',
+                  value: licenseValid,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  String _formatDate(
-    DateTime dateTime,
-  ) {
-    final day =
-        dateTime.day.toString().padLeft(
-              2,
-              '0',
-            );
+  String _formatDate(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
 
-    final month =
-        dateTime.month.toString().padLeft(
-              2,
-              '0',
-            );
+    final month = dateTime.month.toString().padLeft(2, '0');
 
-    final year =
-        dateTime.year.toString();
+    final year = dateTime.year.toString();
 
     return '$day/$month/$year';
   }
 
-  String _formatTime(
-    DateTime dateTime,
-  ) {
-    final hour =
-        dateTime.hour.toString().padLeft(
-              2,
-              '0',
-            );
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour.toString().padLeft(2, '0');
 
-    final minute =
-        dateTime.minute.toString().padLeft(
-              2,
-              '0',
-            );
+    final minute = dateTime.minute.toString().padLeft(2, '0');
 
-    final second =
-        dateTime.second.toString().padLeft(
-              2,
-              '0',
-            );
+    final second = dateTime.second.toString().padLeft(2, '0');
 
     return '$hour:$minute:$second';
   }
@@ -205,39 +146,26 @@ class _InfoRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 14,
-            color: GlobalColors.secondaryText,
-        ),
+        Icon(icon, size: 14, color: GlobalColors.secondaryText),
 
         const SizedBox(width: 7),
 
-        Text(
-          label,
-            style: GlobalColors.infoLabelTextStyle,
-        ),
+        Text(label, style: GlobalColors.infoLabelTextStyle),
 
         const SizedBox(width: 12),
 
         Expanded(
           child: Text(
-            value.isEmpty
-                ? '-'
-                : value,
+            value.isEmpty ? '-' : value,
 
-            textAlign:
-                TextAlign.right,
+            textAlign: TextAlign.right,
 
             maxLines: 1,
 
-            overflow:
-                TextOverflow.ellipsis,
+            overflow: TextOverflow.ellipsis,
 
             style: GlobalColors.infoValueTextStyle,
           ),

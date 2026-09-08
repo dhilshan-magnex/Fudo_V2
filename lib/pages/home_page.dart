@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/client_service.dart';
+import '../session/session_provider.dart';
 import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
 import '../widgets/button.dart';
@@ -56,8 +58,7 @@ class _HomePageState extends State<HomePage> {
 
   static void _emptyAction() {}
 
-  late final Future<Map<String, dynamic>?>
-      _clientInfoFuture;
+  late final Future<Map<String, dynamic>?> _clientInfoFuture;
 
   late DateTime _now;
 
@@ -67,21 +68,17 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
-    _clientInfoFuture =
-        _clientService.getClientInfo();
+    _clientInfoFuture = _clientService.getClientInfo();
 
     _now = DateTime.now();
 
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) {
-        if (!mounted) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
 
-        setState(() {
-          _now = DateTime.now();
-        });
-      },
-    );
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
   }
 
   @override
@@ -95,27 +92,40 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('FUDO V2'),
-        actions: const [
-          ExitButton(),
-        ],
+        actions: const [ExitButton()],
       ),
 
       body: SafeArea(
         child: HomeLayout(
-          primaryContent: ClientDetails(
-            clientInfoFuture:
-                _clientInfoFuture,
-            currentDateTime: _now,
+          primaryContent: FutureBuilder<Map<String, dynamic>?>(
+            future: _clientInfoFuture,
+            builder: (context, snapshot) {
+              final clientInfo = snapshot.data;
+              final session = context.watch<SessionProvider>();
+
+              return ClientDetails(
+                clientName:
+                    session.clientName ??
+                    clientInfo?['Client_Name']?.toString() ??
+                    '',
+                clientId:
+                    session.clientId ??
+                    clientInfo?['Client_ID']?.toString() ??
+                    '',
+                userName: session.userName ?? '',
+                status: clientInfo?['Status']?.toString() ?? '',
+                licenseValid: clientInfo?['License_valid']?.toString() ?? '',
+                currentDateTime: _now,
+              );
+            },
           ),
 
-          portraitSideContent:
-              HomeActionPanel(
+          portraitSideContent: HomeActionPanel(
             wrapButtons: true,
             buttons: _homeButtons,
           ),
 
-          landscapeSideContent:
-              HomeActionPanel(
+          landscapeSideContent: HomeActionPanel(
             wrapButtons: true,
             buttons: _homeButtons,
           ),

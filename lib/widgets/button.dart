@@ -19,12 +19,7 @@ class HomeActionPanel extends StatelessWidget {
             ? (constraints.maxWidth - 15) / 2
             : constraints.maxWidth;
         final sizedButtons = buttons
-            .map(
-              (button) => SizedBox(
-                width: buttonWidth,
-                child: button,
-              ),
-            )
+            .map((button) => SizedBox(width: buttonWidth, child: button))
             .toList();
 
         if (wrapButtons) {
@@ -56,7 +51,8 @@ class HomeActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
+  
+//Button Design
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -73,6 +69,10 @@ class HomeActionButton extends StatelessWidget {
           padding: GlobalColors.buttonPadding,
           alignment: Alignment.centerLeft,
           textStyle: GlobalColors.buttonTextStyle,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: GlobalColors.divider, width: 1),
+          ),
         ),
       ),
     );

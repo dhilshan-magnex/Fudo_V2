@@ -391,7 +391,7 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Company Name',
+                  'Magnex Solutions',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
