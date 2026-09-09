@@ -39,6 +39,8 @@ class DBManager {
     AppDatabase.fudo: _DatabaseConfig(
       fileName: 'Fudo.db',
       assetPath: 'assets/database/Fudo.db',
+      requiredTable: 'User_File',
+      requiredColumns: ['User_ID', 'User_Name', 'User_Pwd', 'User_Active'],
     ),
     AppDatabase.sys: _DatabaseConfig(
       fileName: 'Sys.db',
@@ -49,14 +51,24 @@ class DBManager {
   };
 
   static final Map<AppDatabase, Database> _databases = {};
+  static final Map<AppDatabase, Future<Database>> _openingDatabases = {};
 
   static Future<Database> getDatabase(AppDatabase dbType) async {
     final existingDatabase = _databases[dbType];
     if (existingDatabase != null) return existingDatabase;
 
-    final database = await _openDatabase(dbType);
-    _databases[dbType] = database;
-    return database;
+    final openingDatabase = _openingDatabases.putIfAbsent(
+      dbType,
+      () => _openDatabase(dbType),
+    );
+
+    try {
+      final database = await openingDatabase;
+      _databases[dbType] = database;
+      return database;
+    } finally {
+      _openingDatabases.remove(dbType);
+    }
   }
 
   //authservice 
