@@ -4,7 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 
-//call sqlite or API
+// Selects whether a client uses local SQLite data or the API.
 enum DataSource { sqlite, api }
 
 class DataSourceManager {
@@ -33,7 +33,7 @@ class _DatabaseConfig {
   final List<String> requiredColumns;
 }
 
-//database manager
+//Database manager
 class DBManager {
   static const Map<AppDatabase, _DatabaseConfig> _configs = {
     AppDatabase.fudo: _DatabaseConfig(
@@ -50,6 +50,7 @@ class DBManager {
     ),
   };
 
+  // Cache open databases and prevent concurrent initialization.
   static final Map<AppDatabase, Database> _databases = {};
   static final Map<AppDatabase, Future<Database>> _openingDatabases = {};
 
@@ -71,7 +72,6 @@ class DBManager {
     }
   }
 
-  //authservice 
   static Future<Map<String, dynamic>?> getClientInfo() async {
     final database = await getDatabase(AppDatabase.sys);
     final rows = await database.query('App_License');
