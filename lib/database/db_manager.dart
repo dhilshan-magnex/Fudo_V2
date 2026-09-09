@@ -19,6 +19,20 @@ class DataSourceManager {
 
 enum AppDatabase { fudo, sys }
 
+class _DatabaseConfig {
+  const _DatabaseConfig({
+    required this.fileName,
+    required this.assetPath,
+    this.requiredTable,
+    this.requiredColumns = const [],
+  });
+
+  final String fileName;
+  final String assetPath;
+  final String? requiredTable;
+  final List<String> requiredColumns;
+}
+
 //database manager
 class DBManager {
   static const Map<AppDatabase, _DatabaseConfig> _configs = {
@@ -45,8 +59,7 @@ class DBManager {
     return database;
   }
 
-  //authservice
-  
+  //authservice 
   static Future<Map<String, dynamic>?> getClientInfo() async {
     final database = await getDatabase(AppDatabase.sys);
     final rows = await database.query('App_License');
@@ -148,16 +161,4 @@ class DBManager {
   }
 }
 
-class _DatabaseConfig {
-  const _DatabaseConfig({
-    required this.fileName,
-    required this.assetPath,
-    this.requiredTable,
-    this.requiredColumns = const [],
-  });
 
-  final String fileName;
-  final String assetPath;
-  final String? requiredTable;
-  final List<String> requiredColumns;
-}
