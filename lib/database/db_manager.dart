@@ -3,8 +3,23 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+
+//call sqlite or API
+enum DataSource { sqlite, api }
+
+class DataSourceManager {
+  static DataSource getDataSource(String clientId) {
+    if (clientId == '001') {
+      return DataSource.sqlite;
+    }
+
+    return DataSource.api;
+  }
+}
+
 enum AppDatabase { fudo, sys }
 
+//database manager
 class DBManager {
   static const Map<AppDatabase, _DatabaseConfig> _configs = {
     AppDatabase.fudo: _DatabaseConfig(
@@ -28,6 +43,41 @@ class DBManager {
     final database = await _openDatabase(dbType);
     _databases[dbType] = database;
     return database;
+  }
+
+  //authservice
+  
+  static Future<Map<String, dynamic>?> getClientInfo() async {
+    final database = await getDatabase(AppDatabase.sys);
+    final rows = await database.query('App_License');
+
+    if (rows.isEmpty) return null;
+
+    return rows.first;
+  }
+
+  static Future<Map<String, dynamic>?> getUserForLogin(
+    String clientId,
+    String userId,
+  ) async {
+    if (DataSourceManager.getDataSource(clientId) != DataSource.sqlite) {
+      return null;
+    }
+
+    final database = await getDatabase(AppDatabase.fudo);
+    final trimmedUserId = userId.trim();
+    final rows = await database.query(
+      'User_File',
+      where: '''
+        (CAST(User_ID AS TEXT) = ? OR User_Name = ?)
+        AND User_Active = ?
+      ''',
+      whereArgs: [trimmedUserId, trimmedUserId, 1],
+    );
+
+    if (rows.isEmpty) return null;
+
+    return rows.first;
   }
 
   static Future<Database> _openDatabase(AppDatabase dbType) async {
@@ -83,7 +133,9 @@ class DBManager {
   ) async {
     final database = await openDatabase(databasePath, readOnly: true);
     try {
-      final tableInfo = await database.rawQuery('PRAGMA table_info($tableName)');
+      final tableInfo = await database.rawQuery(
+        'PRAGMA table_info($tableName)',
+      );
       final existingColumns = tableInfo
           .map((column) => column['name']?.toString())
           .whereType<String>()

@@ -1,5 +1,4 @@
 import 'db_manager.dart';
-import 'data_source_manager.dart';
 
 class SQLiteClass {
   static Future<List<Map<String, dynamic>>> getTableData(
@@ -15,11 +14,7 @@ class SQLiteClass {
       return await db.query(tableName);
     }
 
-    return await _getTableDataFromApi(
-      clientId,
-      dbType,
-      tableName,
-    );
+    return await _getTableDataFromApi(clientId, dbType, tableName);
   }
 
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
@@ -34,11 +29,7 @@ class SQLiteClass {
     if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
 
-      return await db.query(
-        tableName,
-        where: where,
-        whereArgs: whereArgs,
-      );
+      return await db.query(tableName, where: where, whereArgs: whereArgs);
     }
 
     return await _getTableDataWhereFromApi(
@@ -48,6 +39,26 @@ class SQLiteClass {
       where: where,
       whereArgs: whereArgs,
     );
+  }
+
+  static Future<Map<String, dynamic>?> getFirstTableRow(
+    String clientId,
+    AppDatabase dbType,
+    String tableName, {
+    String? where,
+    List<dynamic>? whereArgs,
+  }) async {
+    final rows = await getTableDataWhere(
+      clientId,
+      dbType,
+      tableName,
+      where: where ?? '1 = 1',
+      whereArgs: whereArgs ?? const [],
+    );
+
+    if (rows.isEmpty) return null;
+
+    return rows.first;
   }
 
   static Future<List<Map<String, dynamic>>> _getTableDataFromApi(

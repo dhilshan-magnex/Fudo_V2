@@ -59,7 +59,7 @@ class ClientDetails extends StatelessWidget {
                   value: clientId,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: _InfoRow(
                   icon: Icons.person_outline,
@@ -70,7 +70,7 @@ class ClientDetails extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 9),
+          const SizedBox(height: 12),
 
           Row(
             children: [
@@ -92,7 +92,7 @@ class ClientDetails extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 9),
+          const SizedBox(height: 12),
 
           Row(
             children: [
