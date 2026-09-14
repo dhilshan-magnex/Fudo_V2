@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/button.dart';
-import '../widgets/exit_button.dart';
 
 class DataSyncDialog extends StatefulWidget {
 	const DataSyncDialog({super.key});
@@ -54,7 +53,6 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 			title: Row(
 				children: [
 					const Expanded(child: Text('Data Sync')),
-					const ExitButton(),
 				],
 			),
 			content: Column(
