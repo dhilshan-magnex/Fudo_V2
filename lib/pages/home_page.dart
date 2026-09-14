@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/client_service.dart';
 import '../session/session_provider.dart';
+import 'data_sync.dart';
 import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
 import '../widgets/button.dart';
@@ -18,7 +19,14 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _clientService = ClientService();
 
-  final _homeButtons = [
+  void _openDataSync() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const DataSyncDialog(),
+    );
+  }
+
+  List<HomeActionButton> _homeButtons(BuildContext context) => [
     HomeActionButton(
       icon: Icons.receipt_long,
       label: 'Billing',
@@ -34,6 +42,11 @@ class _HomePageState extends State<HomePage> {
       label: 'Reports',
       onTap: _emptyAction,
     ),
+    HomeActionButton(
+      icon:Icons.sync,
+      label:'DataSync',
+      onTap: _openDataSync,
+      ),
     HomeActionButton(
       icon: Icons.point_of_sale,
       label: 'POS Setting',
@@ -122,12 +135,12 @@ class _HomePageState extends State<HomePage> {
 
           portraitSideContent: HomeActionPanel(
             wrapButtons: true,
-            buttons: _homeButtons,
+            buttons: _homeButtons(context),
           ),
 
           landscapeSideContent: HomeActionPanel(
             wrapButtons: true,
-            buttons: _homeButtons,
+            buttons: _homeButtons(context),
           ),
         ),
       ),
