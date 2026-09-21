@@ -1,3 +1,4 @@
+import 'api_route_registry.dart';
 import 'db_manager.dart';
 
 class SQLiteClass {
@@ -14,7 +15,7 @@ class SQLiteClass {
       return await db.query(tableName);
     }
 
-    return await _getTableDataFromApi(clientId, dbType, tableName);
+    return await _getTableDataFromApi(dbType, tableName);
   }
 
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
@@ -33,7 +34,6 @@ class SQLiteClass {
     }
 
     return await _getTableDataWhereFromApi(
-      clientId,
       dbType,
       tableName,
       where: where,
@@ -62,24 +62,24 @@ class SQLiteClass {
   }
 
   static Future<List<Map<String, dynamic>>> _getTableDataFromApi(
-    String clientId,
     AppDatabase dbType,
     String tableName,
   ) async {
-    // Implement API request here
+    await ApiRouteRegistry.syncTable(dbType, tableName);
 
-    return [];
+    final db = await DBManager.getDatabase(dbType);
+    return db.query(tableName);
   }
 
   static Future<List<Map<String, dynamic>>> _getTableDataWhereFromApi(
-    String clientId,
     AppDatabase dbType,
     String tableName, {
     required String where,
     required List<dynamic> whereArgs,
   }) async {
-    //Implement API request here
+    await ApiRouteRegistry.syncTable(dbType, tableName);
 
-    return [];
+    final db = await DBManager.getDatabase(dbType);
+    return db.query(tableName, where: where, whereArgs: whereArgs);
   }
 }

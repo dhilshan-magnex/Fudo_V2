@@ -1,5 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import '../api/category_api.dart';
 import '../widgets/button.dart';
 
 class DataSyncDialog extends StatefulWidget {
@@ -10,41 +10,44 @@ class DataSyncDialog extends StatefulWidget {
 }
 
 class _DataSyncDialogState extends State<DataSyncDialog> {
-	Timer? _progressTimer;
-	double _progress = 0;
+	final _categoryApi = CategoryApi();
+	double? _progress = 0;
 	bool _isSyncing = false;
+	bool _syncComplete = false;
+	String _message = 'Do you want to synchronize data now?';
 
-	@override
-	void dispose() {
-		_progressTimer?.cancel();
-		super.dispose();
-	}
-
-	void _startSync() {
+	Future<void> _startSync() async {
 		if (_isSyncing) return;
 
 		setState(() {
 			_isSyncing = true;
-			_progress = 0;
+			_syncComplete = false;
+			_progress = null;
+			_message = 'Synchronizing data...';
 		});
 
-		_progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-			if (!mounted) {
-				timer.cancel();
-				return;
-			}
+		try {
+			final result = await _categoryApi.syncCategories(clearExistingData: true);
+
+			if (!mounted) return;
 
 			setState(() {
-				_progress = (_progress + 0.05).clamp(0, 1);
+				_isSyncing = false;
+				_syncComplete = true;
+				_progress = 1;
+				_message =
+						'Synchronized L1 ${result.categoryLvl1}, L2 ${result.categoryLvl2}, L3 ${result.categoryLvl3}';
 			});
+		} catch (e) {
+			if (!mounted) return;
 
-			if (_progress >= 1) {
-				timer.cancel();
-				setState(() {
-					_isSyncing = false;
-				});
-			}
-		});
+			setState(() {
+				_isSyncing = false;
+				_syncComplete = false;
+				_progress = 0;
+				_message = 'Sync failed: $e';
+			});
+		}
 	}
 
 	@override
@@ -60,28 +63,24 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
 					Text(
-						_isSyncing
-								? 'Synchronizing data...'
-								: 'Do you want to synchronize data now?',
+						_message,
 					),
 					const SizedBox(height: 20),
 					LinearProgressIndicator(value: _progress),
 					const SizedBox(height: 24),
 					Row(
 						children: [
-              
-              Expanded(
-
+							Expanded(
 								child: HomeActionButton(
-									icon: _progress >= 1 ? Icons.check : Icons.check_circle,
-									label: _progress >= 1 ? 'Done' : 'Yes',
-									onTap: _progress >= 1
+									icon: _syncComplete ? Icons.check : Icons.check_circle,
+									label: _syncComplete ? 'Done' : 'Yes',
+									onTap: _syncComplete
 											? () => Navigator.of(context).pop()
 											: (_isSyncing ? () {} : _startSync),
 								),
 							),
+							const SizedBox(width: 12),
 							Expanded(
-                
 								child: HomeActionButton(
 									icon: Icons.close,
 									label: 'No',
@@ -90,8 +89,6 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 											: () => Navigator.of(context).pop(),
 								),
 							),
-							const SizedBox(width: 12),
-							
 						],
 					),
 				],
