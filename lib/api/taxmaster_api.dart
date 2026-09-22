@@ -4,21 +4,24 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class TaxMasterApi {
   TaxMasterApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String taxMasterApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/taxmaster/940T0003/002';
+  static const String taxMasterEndpoint = 'taxmaster';
 
   final http.Client _client;
 
   Future<TaxMasterSyncResult> syncTaxMaster({
-    String apiUrl = TaxMasterApi.taxMasterApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(TaxMasterApi.taxMasterEndpoint),
+      headers: headers,
+    );
 
     return saveTaxMasterRows(
       rows,

@@ -2,21 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class MoreSizesApi {
   MoreSizesApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String moreSizesApiUrl =
-      'https://fudo.magnexsolutions.com/api/v1_5/moresizes/940T0003/002';
+  static const String moreSizesEndpoint = 'moresizes';
 
   final http.Client _client;
 
   Future<MoreSizesSyncResult> syncMoreSizes({
-    String apiUrl = MoreSizesApi.moreSizesApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(MoreSizesApi.moreSizesEndpoint),
+      headers: headers,
+    );
 
     return saveMoreSizeRows(
       rows,

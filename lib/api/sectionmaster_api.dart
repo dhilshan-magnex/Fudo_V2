@@ -2,21 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class SectionMasterApi {
   SectionMasterApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String sectionMasterApiUrl =
-      'https://fudo.magnexsolutions.com/api/v1_5/sectionmaster/940T0003/002';
+  static const String sectionMasterEndpoint = 'sectionmaster';
 
   final http.Client _client;
 
   Future<SectionMasterSyncResult> syncSectionMaster({
-    String apiUrl = SectionMasterApi.sectionMasterApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(SectionMasterApi.sectionMasterEndpoint),
+      headers: headers,
+    );
 
     return saveSectionMasterRows(
       rows,

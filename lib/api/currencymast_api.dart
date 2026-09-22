@@ -2,21 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class CurrencyMastApi {
   CurrencyMastApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String currencyMastApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/currencymast/940T0003/002';
+  static const String currencyMastEndpoint = 'currencymast';
 
   final http.Client _client;
 
   Future<CurrencyMastSyncResult> syncCurrencyMast({
-    String apiUrl = CurrencyMastApi.currencyMastApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(CurrencyMastApi.currencyMastEndpoint),
+      headers: headers,
+    );
 
     return saveCurrencyMastRows(
       rows,

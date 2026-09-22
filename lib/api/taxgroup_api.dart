@@ -4,21 +4,24 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class TaxGroupApi {
   TaxGroupApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String taxGroupApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/taxgroup/940T0003/002';
+  static const String taxGroupEndpoint = 'taxgroup';
 
   final http.Client _client;
 
   Future<TaxGroupSyncResult> syncTaxGroup({
-    String apiUrl = TaxGroupApi.taxGroupApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(TaxGroupApi.taxGroupEndpoint),
+      headers: headers,
+    );
 
     return saveTaxGroupRows(
       rows,

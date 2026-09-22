@@ -4,21 +4,24 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class SideItemsApi {
   SideItemsApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String sideItemsApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/sideitems/940T0003/002';
+  static const String sideItemsEndpoint = 'sideitems';
 
   final http.Client _client;
 
   Future<SideItemsSyncResult> syncSideItems({
-    String apiUrl = SideItemsApi.sideItemsApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(SideItemsApi.sideItemsEndpoint),
+      headers: headers,
+    );
 
     return saveSideItemsRows(
       rows,

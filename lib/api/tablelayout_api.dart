@@ -4,21 +4,24 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class TableLayoutApi {
   TableLayoutApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String tableLayoutApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/tablelayout/940T0003/002';
+  static const String tableLayoutEndpoint = 'tablelayout';
 
   final http.Client _client;
 
   Future<TableLayoutSyncResult> syncTableLayout({
-    String apiUrl = TableLayoutApi.tableLayoutApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(TableLayoutApi.tableLayoutEndpoint),
+      headers: headers,
+    );
 
     return saveTableLayoutRows(
       rows,

@@ -2,21 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class DiscountMastApi {
   DiscountMastApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String discountMastApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/discountmast/940T0003/002';
+  static const String discountMastEndpoint = 'discountmast';
 
   final http.Client _client;
 
   Future<DiscountMastSyncResult> syncDiscountMast({
-    String apiUrl = DiscountMastApi.discountMastApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ?? ApiSession.instance.urlFor(DiscountMastApi.discountMastEndpoint),
+      headers: headers,
+    );
 
     return saveDiscountMastRows(
       rows,

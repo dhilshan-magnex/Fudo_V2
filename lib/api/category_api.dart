@@ -2,40 +2,38 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class CategoryApi {
   CategoryApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String categoryLvl1ApiUrl =
-      'https://fudo.magnexsolutions.com/api/v1_5/categorylvl1/940T0003/002';
-  static const String categoryLvl2ApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/categorylvl2/940T0003/002';
-  static const String categoryLvl3ApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/categorylvl3/940T0003/002';
-
-  static const String categoryApiUrl =
-      'https://fudo.magnexsolutions.com/api/v1_5/categorylvl1/940T0003/002';
+  static const String categoryLvl1Endpoint = 'categorylvl1';
+  static const String categoryLvl2Endpoint = 'categorylvl2';
+  static const String categoryLvl3Endpoint = 'categorylvl3';
 
   final http.Client _client;
 
   Future<CategorySyncResult> syncCategories({
-    String categoryLvl1Url = CategoryApi.categoryLvl1ApiUrl,
-    String categoryLvl2Url = CategoryApi.categoryLvl2ApiUrl,
-    String categoryLvl3Url = CategoryApi.categoryLvl3ApiUrl,
+    String? categoryLvl1Url,
+    String? categoryLvl2Url,
+    String? categoryLvl3Url,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
     final payload = CategoryPayload(
       categoryLvl1: await _fetchCategoryRows(
-        categoryLvl1Url,
+        categoryLvl1Url ??
+            ApiSession.instance.urlFor(CategoryApi.categoryLvl1Endpoint),
         headers: headers,
       ),
       categoryLvl2: await _fetchCategoryRows(
-        categoryLvl2Url,
+        categoryLvl2Url ??
+            ApiSession.instance.urlFor(CategoryApi.categoryLvl2Endpoint),
         headers: headers,
       ),
       categoryLvl3: await _fetchCategoryRows(
-        categoryLvl3Url,
+        categoryLvl3Url ??
+            ApiSession.instance.urlFor(CategoryApi.categoryLvl3Endpoint),
         headers: headers,
       ),
     );

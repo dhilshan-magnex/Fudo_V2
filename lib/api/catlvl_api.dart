@@ -2,27 +2,32 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class CatLvlApi {
   CatLvlApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String catLvl1ApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/catlv1lang/940T0003/002';
-  static const String catLvl2ApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/catlv2lang/940T0003/002';
+  static const String catLvl1Endpoint = 'catlv1lang';
+  static const String catLvl2Endpoint = 'catlv2lang';
 
 
   final http.Client _client;
 
   Future<CatLvlSyncResult> syncCatLevels({
-    String catLvl1Url = CatLvlApi.catLvl1ApiUrl,
-    String catLvl2Url = CatLvlApi.catLvl2ApiUrl,
+    String? catLvl1Url,
+    String? catLvl2Url,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
     final payload = CatLvlPayload(
-      catLvl1: await _fetchRows(catLvl1Url, headers: headers),
-      catLvl2: await _fetchRows(catLvl2Url, headers: headers),
+      catLvl1: await _fetchRows(
+        catLvl1Url ?? ApiSession.instance.urlFor(CatLvlApi.catLvl1Endpoint),
+        headers: headers,
+      ),
+      catLvl2: await _fetchRows(
+        catLvl2Url ?? ApiSession.instance.urlFor(CatLvlApi.catLvl2Endpoint),
+        headers: headers,
+      ),
     );
 
     return saveCatLevels(

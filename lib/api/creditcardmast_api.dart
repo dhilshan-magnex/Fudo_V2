@@ -2,21 +2,25 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import '../database/db_manager.dart';
+import '../session/api_session.dart';
 
 class CreditCardMastApi {
   CreditCardMastApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const String creditCardMastApiUrl =
-      'http://fudo.magnexsolutions.com/api/v1_5/creditcardmast/940T0003/002';
+  static const String creditCardMastEndpoint = 'creditcardmast';
 
   final http.Client _client;
 
   Future<CreditCardMastSyncResult> syncCreditCardMast({
-    String apiUrl = CreditCardMastApi.creditCardMastApiUrl,
+    String? apiUrl,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(apiUrl, headers: headers);
+    final rows = await _fetchRows(
+      apiUrl ??
+          ApiSession.instance.urlFor(CreditCardMastApi.creditCardMastEndpoint),
+      headers: headers,
+    );
 
     return saveCreditCardMastRows(
       rows,
