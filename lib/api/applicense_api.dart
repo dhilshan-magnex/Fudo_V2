@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class AppLicenseApi {
   AppLicenseApi({http.Client? client})
       : _client = client ?? http.Client();
+
+  static const String appLicenseEndpoint = 'applicense';
+ 
 
   final http.Client _client;
 
@@ -18,25 +21,28 @@ class AppLicenseApi {
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final session = ApiSession.instance;
-
-    final resolvedApiUrl = apiUrl ??
-        (session.isActive
-            ? session.urlFor('applicense')
-            : session.bootstrapUrlFor('applicense'));
+    final resolvedApiUrl = apiUrl ?? ApiConfig.url(appLicenseEndpoint);
 
     final rows = await _fetchAppLicenseRows(
       resolvedApiUrl,
       headers: headers,
     );
 
+    if (rows.isEmpty) {
+      throw Exception(
+        'App License API returned no license rows: $resolvedApiUrl',
+      );
+    }
+
     final result = await saveAppLicenseRows(
       rows,
       clearExistingData: clearExistingData,
     );
 
-    if (rows.isNotEmpty) {
-      session.startFromAppLicense(rows.first);
+    if (result.savedCount == 0) {
+      throw Exception(
+        'App License API returned rows, but none were valid to save',
+      );
     }
 
     return result;
@@ -55,10 +61,11 @@ class AppLicenseApi {
       );
     }
 
-    final response = await _client.get(
-      Uri.parse(apiUrl),
-      headers: headers,
-    );
+    final response = await _client
+        .get(
+          Uri.parse(apiUrl),
+          headers: headers,
+        );
 
     if (response.statusCode < 200 ||
         response.statusCode >= 300) {
@@ -113,16 +120,15 @@ class AppLicenseApi {
       final normalizedRow = _normalizeRow(row);
 
       final clientId = normalizedRow['Client_ID'];
-      final clientName = normalizedRow['Client_Name'];
-
       if (clientId == null ||
           clientId.toString().trim().isEmpty) {
         continue;
       }
 
+      final clientName = normalizedRow['Client_Name'];
       if (clientName == null ||
           clientName.toString().trim().isEmpty) {
-        continue;
+        normalizedRow['Client_Name'] = clientId.toString().trim();
       }
 
       await txn.insert(

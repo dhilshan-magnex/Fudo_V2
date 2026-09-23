@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class SideItemsApi {
   SideItemsApi({http.Client? client}) : _client = client ?? http.Client();
@@ -19,7 +19,7 @@ class SideItemsApi {
     bool clearExistingData = false,
   }) async {
     final rows = await _fetchRows(
-      apiUrl ?? ApiSession.instance.urlFor(SideItemsApi.sideItemsEndpoint),
+      apiUrl ?? ApiConfig.url(SideItemsApi.sideItemsEndpoint),
       headers: headers,
     );
 

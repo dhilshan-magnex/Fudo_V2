@@ -43,10 +43,10 @@ class _HomePageState extends State<HomePage> {
       onTap: _emptyAction,
     ),
     HomeActionButton(
-      icon:Icons.sync,
-      label:'DataSync',
+      icon: Icons.sync,
+      label: 'Data Sync',
       onTap: _openDataSync,
-      ),
+    ),
     HomeActionButton(
       icon: Icons.point_of_sale,
       label: 'POS Setting',

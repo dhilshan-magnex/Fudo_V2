@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class TaxGroupApi {
   TaxGroupApi({http.Client? client}) : _client = client ?? http.Client();
@@ -19,7 +19,7 @@ class TaxGroupApi {
     bool clearExistingData = false,
   }) async {
     final rows = await _fetchRows(
-      apiUrl ?? ApiSession.instance.urlFor(TaxGroupApi.taxGroupEndpoint),
+      apiUrl ?? ApiConfig.url(TaxGroupApi.taxGroupEndpoint),
       headers: headers,
     );
 

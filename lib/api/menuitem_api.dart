@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class MenuItemApi {
   MenuItemApi({http.Client? client}) : _client = client ?? http.Client();
@@ -17,7 +17,7 @@ class MenuItemApi {
     bool clearExistingData = false,
   }) async {
     final rows = await _fetchRows(
-      apiUrl ?? ApiSession.instance.urlFor(MenuItemApi.menuItemEndpoint),
+      apiUrl ?? ApiConfig.url(MenuItemApi.menuItemEndpoint),
       headers: headers,
     );
 
@@ -67,6 +67,7 @@ class MenuItemApi {
     Transaction txn,
     List<Map<String, dynamic>> rows,
   ) async {
+    final existingColumns = await _getExistingColumns(txn);
     var savedCount = 0;
 
     for (final row in rows) {
@@ -77,15 +78,34 @@ class MenuItemApi {
         continue;
       }
 
+      final insertRow = <String, dynamic>{};
+      for (final entry in normalizedRow.entries) {
+        if (existingColumns.contains(entry.key)) {
+          insertRow[entry.key] = entry.value;
+        }
+      }
+
+      if (insertRow.isEmpty) {
+        continue;
+      }
+
       await txn.insert(
         'Menu_Items',
-        normalizedRow,
+        insertRow,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       savedCount++;
     }
 
     return savedCount;
+  }
+
+  Future<Set<String>> _getExistingColumns(Transaction txn) async {
+    final schema = await txn.rawQuery('PRAGMA table_info(Menu_Items)');
+    return schema
+        .map((column) => column['name']?.toString())
+        .whereType<String>()
+        .toSet();
   }
 
   Map<String, dynamic> _normalizeRow(Map<String, dynamic> row) {
@@ -124,7 +144,7 @@ class MenuItemPayload {
   static const columns = {
     'Cat_Code',
     'Cat_Lv2_Code',
-    'Cat_Lv3_Code ',
+    'Cat_Lv3_Code',
     'Menu_ID',
     'Menu_Name',
     'Menu_Long_Name',

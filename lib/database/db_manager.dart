@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -105,16 +107,35 @@ class DBManager {
     return rows.first;
   }
 
-  static Future<Database> _openDatabase(AppDatabase dbType) async {
-    final config = _configs[dbType]!;
-    final databaseDirectory = await getDatabasesPath();
-    final databasePath = join(databaseDirectory, config.fileName);
+ static Future<Database> _openDatabase(AppDatabase dbType) async {
+  final config = _configs[dbType]!;
 
-    await _refreshInvalidDatabase(databasePath, config);
-    await _copyAssetDatabaseIfMissing(databasePath, config.assetPath);
+  final databaseDirectory = await getDatabasesPath();
+  final databasePath = join(
+    databaseDirectory,
+    config.fileName,
+  );
 
-    return openDatabase(databasePath);
-  }
+  debugPrint('========================================');
+  debugPrint('DATABASE OPEN');
+  debugPrint('Database type: ${dbType.name}');
+  debugPrint('Database path: $databasePath');
+  debugPrint('========================================');
+
+  await _refreshInvalidDatabase(
+    databasePath,
+    config,
+  );
+
+  await _copyAssetDatabaseIfMissing(
+    databasePath,
+    config.assetPath,
+  );
+
+  debugPrint('Opening database: $databasePath');
+
+  return openDatabase(databasePath);
+}
 
   static Future<void> _refreshInvalidDatabase(
     String databasePath,

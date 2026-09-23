@@ -1,17 +1,25 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class CategoryApi {
-  CategoryApi({http.Client? client}) : _client = client ?? http.Client();
+  CategoryApi({http.Client? client})
+      : _client = client ?? http.Client();
 
   static const String categoryLvl1Endpoint = 'categorylvl1';
   static const String categoryLvl2Endpoint = 'categorylvl2';
   static const String categoryLvl3Endpoint = 'categorylvl3';
 
   final http.Client _client;
+
+  // ============================================================
+  // SYNC ALL CATEGORIES
+  // ============================================================
 
   Future<CategorySyncResult> syncCategories({
     String? categoryLvl1Url,
@@ -20,104 +28,248 @@ class CategoryApi {
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final payload = CategoryPayload(
-      categoryLvl1: await _fetchCategoryRows(
+    debugPrint('========================================');
+    debugPrint('CATEGORY SYNC STARTED');
+    debugPrint('========================================');
+
+    // Run all three API calls at the same time.
+    final results = await Future.wait([
+      _fetchCategoryRows(
         categoryLvl1Url ??
-            ApiSession.instance.urlFor(CategoryApi.categoryLvl1Endpoint),
+            ApiConfig.url(
+              CategoryApi.categoryLvl1Endpoint,
+            ),
         headers: headers,
       ),
-      categoryLvl2: await _fetchCategoryRows(
+      _fetchCategoryRows(
         categoryLvl2Url ??
-            ApiSession.instance.urlFor(CategoryApi.categoryLvl2Endpoint),
+            ApiConfig.url(
+              CategoryApi.categoryLvl2Endpoint,
+            ),
         headers: headers,
       ),
-      categoryLvl3: await _fetchCategoryRows(
+      _fetchCategoryRows(
         categoryLvl3Url ??
-            ApiSession.instance.urlFor(CategoryApi.categoryLvl3Endpoint),
+            ApiConfig.url(
+              CategoryApi.categoryLvl3Endpoint,
+            ),
         headers: headers,
       ),
+    ]);
+
+    final payload = CategoryPayload(
+      categoryLvl1: results[0],
+      categoryLvl2: results[1],
+      categoryLvl3: results[2],
     );
 
-    return saveCategories(
+    debugPrint('========================================');
+    debugPrint('API DATA RECEIVED');
+    debugPrint('Level 1: ${payload.categoryLvl1.length}');
+    debugPrint('Level 2: ${payload.categoryLvl2.length}');
+    debugPrint('Level 3: ${payload.categoryLvl3.length}');
+    debugPrint('========================================');
+
+    final result = await saveCategories(
       payload,
       clearExistingData: clearExistingData,
     );
+
+    debugPrint('========================================');
+    debugPrint('CATEGORY SYNC FINISHED');
+    debugPrint('Level 1 saved: ${result.categoryLvl1}');
+    debugPrint('Level 2 saved: ${result.categoryLvl2}');
+    debugPrint('Level 3 saved: ${result.categoryLvl3}');
+    debugPrint('Total saved: ${result.total}');
+    debugPrint('========================================');
+
+    return result;
   }
+
+  // ============================================================
+  // FETCH API DATA
+  // ============================================================
 
   Future<List<Map<String, dynamic>>> _fetchCategoryRows(
     String apiUrl, {
     Map<String, String>? headers,
   }) async {
-    if (apiUrl.trim().isEmpty) return const [];
-
-    final response = await _client.get(Uri.parse(apiUrl), headers: headers);
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (apiUrl.trim().isEmpty) {
       throw Exception(
-        'Category API failed with status ${response.statusCode}: $apiUrl',
+        'Category API URL is not configured.',
       );
     }
 
-    return CategoryPayload.rowsFromJson(jsonDecode(response.body));
+    debugPrint('----------------------------------------');
+    debugPrint('CATEGORY API REQUEST');
+    debugPrint(apiUrl);
+
+    final stopwatch = Stopwatch()..start();
+
+    final response = await _client
+        .get(
+          Uri.parse(apiUrl),
+          headers: headers,
+        )
+        .timeout(
+          const Duration(seconds: 60),
+        );
+
+    stopwatch.stop();
+
+    debugPrint(
+      'STATUS: ${response.statusCode}',
+    );
+
+    debugPrint(
+      'TIME: ${stopwatch.elapsedMilliseconds} ms',
+    );
+
+    debugPrint(
+      'RESPONSE LENGTH: ${response.body.length}',
+    );
+
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      throw Exception(
+        'Category API failed.\n'
+        'Status: ${response.statusCode}\n'
+        'URL: $apiUrl',
+      );
+    }
+
+    if (response.body.trim().isEmpty) {
+      debugPrint('EMPTY RESPONSE');
+
+      return const [];
+    }
+
+    final decodedJson = jsonDecode(
+      response.body,
+    );
+
+    final rows = CategoryPayload.rowsFromJson(
+      decodedJson,
+    );
+
+    debugPrint(
+      'PARSED ROW COUNT: ${rows.length}',
+    );
+
+    return rows;
   }
+
+  // ============================================================
+  // SAVE DATA TO SQLITE
+  // ============================================================
 
   Future<CategorySyncResult> saveCategories(
     CategoryPayload payload, {
     bool clearExistingData = false,
   }) async {
-    final db = await DBManager.getDatabase(AppDatabase.fudo);
+    final db = await DBManager.getDatabase(
+      AppDatabase.fudo,
+    );
 
-    return db.transaction((txn) async {
-      if (clearExistingData) {
-        await _clearCategoryTables(txn);
-      }
+    debugPrint('========================================');
+    debugPrint('DATABASE SAVE STARTED');
+    debugPrint('========================================');
 
-      final categoryTypes = await _upsertRows(
-        txn,
-        tableName: 'Category_Type',
-        rows: payload.categoryTypes,
-        columns: CategoryPayload.categoryTypeColumns,
-        requiredColumns: const ['Cat_Type'],
-      );
+    debugPrint(
+      'Level 1 rows: ${payload.categoryLvl1.length}',
+    );
 
-      final categoryLvl1 = await _upsertRows(
-        txn,
-        tableName: 'Category_Lvl1',
-        rows: payload.categoryLvl1,
-        columns: CategoryPayload.categoryLvl1Columns,
-        requiredColumns: const ['Cat_Code'],
-      );
+    debugPrint(
+      'Level 2 rows: ${payload.categoryLvl2.length}',
+    );
 
-      final categoryLvl2 = await _upsertRows(
-        txn,
-        tableName: 'Category_Lvl2',
-        rows: payload.categoryLvl2,
-        columns: CategoryPayload.categoryLvl2Columns,
-        requiredColumns: const ['Cat_Code', 'Cat_Lv2_Code'],
-      );
+    debugPrint(
+      'Level 3 rows: ${payload.categoryLvl3.length}',
+    );
 
-      final categoryLvl3 = await _upsertRows(
-        txn,
-        tableName: 'Category_Lvl3',
-        rows: payload.categoryLvl3,
-        columns: CategoryPayload.categoryLvl3Columns,
-        requiredColumns: const ['Cat_Code', 'Cat_Lv2_Code', 'Cat_Lv3_Code'],
-      );
+    return db.transaction(
+      (txn) async {
+        if (clearExistingData) {
+          await _clearCategoryTables(txn);
+        }
 
-      return CategorySyncResult(
-        categoryTypes: categoryTypes,
-        categoryLvl1: categoryLvl1,
-        categoryLvl2: categoryLvl2,
-        categoryLvl3: categoryLvl3,
-      );
-    });
+        final categoryTypes = await _upsertRows(
+          txn,
+          tableName: 'Category_Type',
+          rows: payload.categoryTypes,
+          columns: CategoryPayload.categoryTypeColumns,
+          requiredColumns: const [
+            'Cat_Type',
+          ],
+        );
+
+        final categoryLvl1 = await _upsertRows(
+          txn,
+          tableName: 'Category_Lvl1',
+          rows: payload.categoryLvl1,
+          columns: CategoryPayload.categoryLvl1Columns,
+          requiredColumns: const [
+            'Cat_Code',
+          ],
+        );
+
+        final categoryLvl2 = await _upsertRows(
+          txn,
+          tableName: 'Category_Lvl2',
+          rows: payload.categoryLvl2,
+          columns: CategoryPayload.categoryLvl2Columns,
+          requiredColumns: const [
+            'Cat_Code',
+            'Cat_Lv2_Code',
+          ],
+        );
+
+        final categoryLvl3 = await _upsertRows(
+          txn,
+          tableName: 'Category_Lvl3',
+          rows: payload.categoryLvl3,
+          columns: CategoryPayload.categoryLvl3Columns,
+          requiredColumns: const [
+            'Cat_Code',
+            'Cat_Lv2_Code',
+            'Cat_Lv3_Code',
+          ],
+        );
+
+        debugPrint('----------------------------------------');
+        debugPrint('ROWS SAVED');
+        debugPrint('Category Type: $categoryTypes');
+        debugPrint('Category Level 1: $categoryLvl1');
+        debugPrint('Category Level 2: $categoryLvl2');
+        debugPrint('Category Level 3: $categoryLvl3');
+        debugPrint('----------------------------------------');
+
+        return CategorySyncResult(
+          categoryTypes: categoryTypes,
+          categoryLvl1: categoryLvl1,
+          categoryLvl2: categoryLvl2,
+          categoryLvl3: categoryLvl3,
+        );
+      },
+    );
   }
 
-  Future<void> _clearCategoryTables(Transaction txn) async {
+  // ============================================================
+  // CLEAR CATEGORY TABLES
+  // ============================================================
+
+  Future<void> _clearCategoryTables(
+    Transaction txn,
+  ) async {
     await txn.delete('Category_Lvl3');
     await txn.delete('Category_Lvl2');
     await txn.delete('Category_Lvl1');
+    await txn.delete('Category_Type');
   }
+
+  // ============================================================
+  // INSERT / UPDATE ROWS
+  // ============================================================
 
   Future<int> _upsertRows(
     Transaction txn, {
@@ -129,34 +281,54 @@ class CategoryApi {
     var savedCount = 0;
 
     for (final row in rows) {
-      final normalizedRow = _normalizeRow(row, columns);
+      final normalizedRow = _normalizeRow(
+        row,
+        columns,
+      );
 
-      final hasRequiredColumns = requiredColumns.every((column) {
-        final value = normalizedRow[column];
-        return value != null && value.toString().trim().isNotEmpty;
-      });
+      final valid = requiredColumns.every(
+        (column) {
+          final value = normalizedRow[column];
 
-      if (!hasRequiredColumns) continue;
+          return value != null &&
+              value.toString().trim().isNotEmpty;
+        },
+      );
+
+      if (!valid) {
+        continue;
+      }
 
       await txn.insert(
         tableName,
         normalizedRow,
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        conflictAlgorithm:
+            ConflictAlgorithm.replace,
       );
+
       savedCount++;
     }
 
     return savedCount;
   }
 
+  // ============================================================
+  // NORMALIZE ROW
+  // ============================================================
+
   Map<String, dynamic> _normalizeRow(
     Map<String, dynamic> row,
     Set<String> columns,
   ) {
-    final normalizedRow = <String, dynamic>{};
+    final normalizedRow =
+        <String, dynamic>{};
 
     for (final column in columns) {
-      final value = _readValue(row, column);
+      final value = _readValue(
+        row,
+        column,
+      );
+
       if (value != null) {
         normalizedRow[column] = value;
       }
@@ -165,13 +337,24 @@ class CategoryApi {
     return normalizedRow;
   }
 
-  dynamic _readValue(Map<String, dynamic> row, String columnName) {
-    if (row.containsKey(columnName)) return row[columnName];
+  // ============================================================
+  // READ VALUE
+  // ============================================================
 
-    final normalizedColumnName = _normalizeKey(columnName);
+  dynamic _readValue(
+    Map<String, dynamic> row,
+    String columnName,
+  ) {
+    if (row.containsKey(columnName)) {
+      return row[columnName];
+    }
+
+    final normalizedColumn =
+        _normalizeKey(columnName);
 
     for (final entry in row.entries) {
-      if (_normalizeKey(entry.key) == normalizedColumnName) {
+      if (_normalizeKey(entry.key) ==
+          normalizedColumn) {
         return entry.value;
       }
     }
@@ -180,9 +363,18 @@ class CategoryApi {
   }
 
   String _normalizeKey(String value) {
-    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    return value
+        .replaceAll(
+          RegExp(r'[^A-Za-z0-9]'),
+          '',
+        )
+        .toLowerCase();
   }
 }
+
+// ============================================================
+// CATEGORY PAYLOAD
+// ============================================================
 
 class CategoryPayload {
   const CategoryPayload({
@@ -232,65 +424,13 @@ class CategoryPayload {
     'Cat_Lv3_Name2',
   };
 
-  factory CategoryPayload.fromJson(dynamic json) {
-    final root = _unwrapRoot(json);
+  // ============================================================
+  // JSON → ROWS
+  // ============================================================
 
-    if (root is List) {
-      return CategoryPayload(categoryLvl1: _asRows(root));
-    }
-
-    if (root is! Map) {
-      throw FormatException('Category API returned unsupported JSON');
-    }
-
-    final jsonMap = Map<String, dynamic>.from(root);
-
-    return CategoryPayload(
-      categoryTypes: _readRows(
-        jsonMap,
-        const [
-          'Category_Type',
-          'category_type',
-          'categoryTypes',
-          'categoryType',
-          'types',
-        ],
-      ),
-      categoryLvl1: _readRows(
-        jsonMap,
-        const [
-          'Category_Lvl1',
-          'category_lvl1',
-          'categoryLvl1',
-          'categoryLevel1',
-          'level1',
-          'categories',
-        ],
-      ),
-      categoryLvl2: _readRows(
-        jsonMap,
-        const [
-          'Category_Lvl2',
-          'category_lvl2',
-          'categoryLvl2',
-          'categoryLevel2',
-          'level2',
-        ],
-      ),
-      categoryLvl3: _readRows(
-        jsonMap,
-        const [
-          'Category_Lvl3',
-          'category_lvl3',
-          'categoryLvl3',
-          'categoryLevel3',
-          'level3',
-        ],
-      ),
-    );
-  }
-
-  static List<Map<String, dynamic>> rowsFromJson(dynamic json) {
+  static List<Map<String, dynamic>> rowsFromJson(
+    dynamic json,
+  ) {
     final root = _unwrapRoot(json);
 
     if (root is List) {
@@ -298,7 +438,8 @@ class CategoryPayload {
     }
 
     if (root is Map) {
-      final map = Map<String, dynamic>.from(root);
+      final map =
+          Map<String, dynamic>.from(root);
 
       for (final value in map.values) {
         final rows = _asRows(value);
@@ -312,11 +453,18 @@ class CategoryPayload {
     return const [];
   }
 
-  static dynamic _unwrapRoot(dynamic json) {
+  // ============================================================
+  // UNWRAP JSON
+  // ============================================================
+
+  static dynamic _unwrapRoot(
+    dynamic json,
+  ) {
     var current = json;
 
     while (current is Map) {
-      final map = Map<String, dynamic>.from(current);
+      final map =
+          Map<String, dynamic>.from(current);
 
       if (map.containsKey('data')) {
         current = map['data'];
@@ -332,49 +480,30 @@ class CategoryPayload {
     return current;
   }
 
-  static List<Map<String, dynamic>> _readRows(
-    Map<String, dynamic> json,
-    List<String> keys,
+  // ============================================================
+  // LIST → ROWS
+  // ============================================================
+
+  static List<Map<String, dynamic>> _asRows(
+    dynamic value,
   ) {
-    for (final key in keys) {
-      final value = _readValue(json, key);
-      final rows = _asRows(value);
-
-      if (rows.isNotEmpty) {
-        return rows;
-      }
+    if (value is! List) {
+      return const [];
     }
-
-    return const [];
-  }
-
-  static dynamic _readValue(Map<String, dynamic> json, String key) {
-    if (json.containsKey(key)) return json[key];
-
-    final normalizedKey = _normalizeKey(key);
-
-    for (final entry in json.entries) {
-      if (_normalizeKey(entry.key) == normalizedKey) {
-        return entry.value;
-      }
-    }
-
-    return null;
-  }
-
-  static List<Map<String, dynamic>> _asRows(dynamic value) {
-    if (value is! List) return const [];
 
     return value
         .whereType<Map>()
-        .map((row) => Map<String, dynamic>.from(row))
+        .map(
+          (row) =>
+              Map<String, dynamic>.from(row),
+        )
         .toList();
   }
-
-  static String _normalizeKey(String value) {
-    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
-  }
 }
+
+// ============================================================
+// SYNC RESULT
+// ============================================================
 
 class CategorySyncResult {
   const CategorySyncResult({
@@ -390,5 +519,8 @@ class CategorySyncResult {
   final int categoryLvl3;
 
   int get total =>
-      categoryTypes + categoryLvl1 + categoryLvl2 + categoryLvl3;
+      categoryTypes +
+      categoryLvl1 +
+      categoryLvl2 +
+      categoryLvl3;
 }

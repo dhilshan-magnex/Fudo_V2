@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class CreditCardMastApi {
   CreditCardMastApi({http.Client? client}) : _client = client ?? http.Client();
@@ -18,7 +18,7 @@ class CreditCardMastApi {
   }) async {
     final rows = await _fetchRows(
       apiUrl ??
-          ApiSession.instance.urlFor(CreditCardMastApi.creditCardMastEndpoint),
+          ApiConfig.url(CreditCardMastApi.creditCardMastEndpoint),
       headers: headers,
     );
 

@@ -1,6 +1,5 @@
 import '../database/db_manager.dart';
 import '../database/sqlite_class.dart';
-import '../session/api_session.dart';
 
 class ClientService {
   Future<Map<String, dynamic>?> getClientInfo() async {
@@ -9,10 +8,6 @@ class ClientService {
       AppDatabase.sys,
       'App_License',
     );
-
-    if (clientInfo != null) {
-      ApiSession.instance.startFromAppLicense(clientInfo);
-    }
 
     return clientInfo;
   }

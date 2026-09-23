@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class MoreSizesApi {
   MoreSizesApi({http.Client? client}) : _client = client ?? http.Client();
@@ -17,7 +17,7 @@ class MoreSizesApi {
     bool clearExistingData = false,
   }) async {
     final rows = await _fetchRows(
-      apiUrl ?? ApiSession.instance.urlFor(MoreSizesApi.moreSizesEndpoint),
+      apiUrl ?? ApiConfig.url(MoreSizesApi.moreSizesEndpoint),
       headers: headers,
     );
 

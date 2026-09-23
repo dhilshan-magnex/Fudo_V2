@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
+import 'api_config.dart';
 import '../database/db_manager.dart';
-import '../session/api_session.dart';
 
 class CatLvlApi {
   CatLvlApi({http.Client? client}) : _client = client ?? http.Client();
@@ -21,11 +21,11 @@ class CatLvlApi {
   }) async {
     final payload = CatLvlPayload(
       catLvl1: await _fetchRows(
-        catLvl1Url ?? ApiSession.instance.urlFor(CatLvlApi.catLvl1Endpoint),
+        catLvl1Url ?? ApiConfig.url(CatLvlApi.catLvl1Endpoint),
         headers: headers,
       ),
       catLvl2: await _fetchRows(
-        catLvl2Url ?? ApiSession.instance.urlFor(CatLvlApi.catLvl2Endpoint),
+        catLvl2Url ?? ApiConfig.url(CatLvlApi.catLvl2Endpoint),
         headers: headers,
       ),
     );
