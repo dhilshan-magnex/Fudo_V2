@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
-import 'api_config.dart';
+import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class TableLayoutApi {

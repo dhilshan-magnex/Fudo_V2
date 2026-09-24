@@ -6,12 +6,14 @@ class SessionProvider extends ChangeNotifier {
   String? _userId;
   String? _userName;
   String? _clientType;
+  String? _groupCode;
 
   String? get clientId => _clientId;
   String? get clientName => _clientName;
   String? get userId => _userId;
   String? get userName => _userName;
   String? get clientType => _clientType;
+  String? get groupCode => _groupCode;
 
   bool get isLoggedIn => _userId != null;
 
@@ -21,12 +23,14 @@ class SessionProvider extends ChangeNotifier {
     required String userId,
     required String userName,
     String? clientType,
+    String? groupCode,
   }) {
     _clientId = clientId;
     _clientName = clientName;
     _userId = userId;
     _userName = userName;
     _clientType = clientType;
+    _groupCode = groupCode;
 
     notifyListeners();
   }
@@ -37,6 +41,7 @@ class SessionProvider extends ChangeNotifier {
     _userId = null;
     _userName = null;
     _clientType = null;
+    _groupCode = null;
 
     notifyListeners();
   }

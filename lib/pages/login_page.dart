@@ -131,6 +131,7 @@ class _LoginPageState extends State<LoginPage> {
         clientType: clientType,
         userId: userId,
         userName: userName,
+        groupCode: user['Group_Code']?.toString(),
       );
 
       setState(() {

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-
 import '../database/api_route_registry.dart';
+import '../function/app_functions.dart';
 import '../widgets/button.dart';
+import 'package:provider/provider.dart';
+import '../session/session_provider.dart';
+import '../services/access_control_service.dart';
 
 class DataSyncDialog extends StatefulWidget {
   const DataSyncDialog({
@@ -28,6 +31,43 @@ class _DataSyncDialogState
     return;
   }
 
+  final session = context.read<SessionProvider>();
+
+  final groupCode = session.groupCode;
+
+  if (groupCode == null || groupCode.trim().isEmpty) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _message =
+          'User group information is unavailable.';
+    });
+
+    return;
+  }
+
+  final allowed =
+      await AccessControlService.checkAccess(
+    groupCode: groupCode,
+    screenId: AppFunctions.dataSyncScreen,
+    functionId: AppFunctions.dataSync,
+  );
+
+  if (!allowed) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _message =
+          'You do not have permission to use Data Sync.';
+    });
+
+    return;
+  }
+
   setState(() {
     _isSyncing = true;
     _syncComplete = false;
@@ -44,9 +84,10 @@ class _DataSyncDialogState
         }
 
         setState(() {
-          _progress = progress.completedCount == 0
-              ? null
-              : progress.value;
+          _progress =
+              progress.completedCount == 0
+                  ? null
+                  : progress.value;
 
           _message = progress.isCompleted
               ? 'Data synchronization completed.'
