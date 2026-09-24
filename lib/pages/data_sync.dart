@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../database/api_route_registry.dart';
 import '../function/app_functions.dart';
 import '../widgets/button.dart';
+import '../widgets/authorization.dart';
 import 'package:provider/provider.dart';
 import '../session/session_provider.dart';
 import '../services/access_control_service.dart';
@@ -25,6 +26,15 @@ class _DataSyncDialogState
 
   String _message =
       'Do you want to synchronize categories now?';
+
+  Future<void> _showPermissionDeniedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => const AuthorizationDialog(
+        message: 'You do not have permission to use Data Sync.',
+      ),
+    );
+  }
 
   Future<void> _startSync() async {
   if (_isSyncing) {
@@ -60,10 +70,7 @@ class _DataSyncDialogState
       return;
     }
 
-    setState(() {
-      _message =
-          'You do not have permission to use Data Sync.';
-    });
+    await _showPermissionDeniedDialog();
 
     return;
   }

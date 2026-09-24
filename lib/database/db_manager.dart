@@ -116,11 +116,11 @@ class DBManager {
     config.fileName,
   );
 
-  debugPrint('========================================');
-  debugPrint('DATABASE OPEN');
-  debugPrint('Database type: ${dbType.name}');
-  debugPrint('Database path: $databasePath');
-  debugPrint('========================================');
+  // debugPrint('========================================');
+  // debugPrint('DATABASE OPEN');
+  // debugPrint('Database type: ${dbType.name}');
+  // debugPrint('Database path: $databasePath');
+  // debugPrint('========================================');
 
   await _refreshInvalidDatabase(
     databasePath,
@@ -140,7 +140,7 @@ class DBManager {
   static Future<void> _refreshInvalidDatabase(
     String databasePath,
     _DatabaseConfig config,
-  ) async {
+  ) async { 
     if (config.requiredTable == null) return;
     if (!await databaseExists(databasePath)) return;
 
