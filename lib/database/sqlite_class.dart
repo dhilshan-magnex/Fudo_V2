@@ -23,9 +23,8 @@ class SQLiteClass {
     final dataSource =
         DataSourceManager.getDataSource(clientId);
 
-    // ------------------------------------------------------------
+
     // SQLITE CLIENT
-    // ------------------------------------------------------------
 
     if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
@@ -33,9 +32,8 @@ class SQLiteClass {
       return db.query(tableName);
     }
 
-    // ------------------------------------------------------------
+
     // API CLIENT
-    // ------------------------------------------------------------
 
     await _syncTableFromApi(
       dbType,
@@ -74,9 +72,8 @@ class SQLiteClass {
     final dataSource =
         DataSourceManager.getDataSource(clientId);
 
-    // ------------------------------------------------------------
+  
     // SQLITE CLIENT
-    // ------------------------------------------------------------
 
     if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
@@ -88,9 +85,8 @@ class SQLiteClass {
       );
     }
 
-    // ------------------------------------------------------------
+
     // API CLIENT
-    // ------------------------------------------------------------
 
     await _syncTableFromApi(
       dbType,
@@ -107,9 +103,8 @@ class SQLiteClass {
     );
   }
 
-  // ============================================================
+  
   // GET FIRST ROW
-  // ============================================================
 
   /// Returns the first matching row.
   ///

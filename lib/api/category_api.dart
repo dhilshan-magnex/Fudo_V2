@@ -1,9 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
-
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
@@ -17,9 +15,8 @@ class CategoryApi {
 
   final http.Client _client;
 
-  // ============================================================
+
   // SYNC ALL CATEGORIES
-  // ============================================================
 
   Future<CategorySyncResult> syncCategories({
     String? categoryLvl1Url,
@@ -86,9 +83,8 @@ class CategoryApi {
     return result;
   }
 
-  // ============================================================
+
   // FETCH API DATA
-  // ============================================================
 
   Future<List<Map<String, dynamic>>> _fetchCategoryRows(
     String apiUrl, {
@@ -159,9 +155,8 @@ class CategoryApi {
     return rows;
   }
 
-  // ============================================================
+  
   // SAVE DATA TO SQLITE
-  // ============================================================
 
   Future<CategorySyncResult> saveCategories(
     CategoryPayload payload, {
@@ -254,9 +249,8 @@ class CategoryApi {
     );
   }
 
-  // ============================================================
+  
   // CLEAR CATEGORY TABLES
-  // ============================================================
 
   Future<void> _clearCategoryTables(
     Transaction txn,
@@ -267,9 +261,8 @@ class CategoryApi {
     await txn.delete('Category_Type');
   }
 
-  // ============================================================
+  
   // INSERT / UPDATE ROWS
-  // ============================================================
 
   Future<int> _upsertRows(
     Transaction txn, {
@@ -312,9 +305,8 @@ class CategoryApi {
     return savedCount;
   }
 
-  // ============================================================
+  
   // NORMALIZE ROW
-  // ============================================================
 
   Map<String, dynamic> _normalizeRow(
     Map<String, dynamic> row,
@@ -337,9 +329,8 @@ class CategoryApi {
     return normalizedRow;
   }
 
-  // ============================================================
+  
   // READ VALUE
-  // ============================================================
 
   dynamic _readValue(
     Map<String, dynamic> row,
@@ -372,9 +363,8 @@ class CategoryApi {
   }
 }
 
-// ============================================================
+
 // CATEGORY PAYLOAD
-// ============================================================
 
 class CategoryPayload {
   const CategoryPayload({
@@ -424,9 +414,8 @@ class CategoryPayload {
     'Cat_Lv3_Name2',
   };
 
-  // ============================================================
+  
   // JSON → ROWS
-  // ============================================================
 
   static List<Map<String, dynamic>> rowsFromJson(
     dynamic json,
@@ -453,9 +442,8 @@ class CategoryPayload {
     return const [];
   }
 
-  // ============================================================
+  
   // UNWRAP JSON
-  // ============================================================
 
   static dynamic _unwrapRoot(
     dynamic json,
@@ -480,9 +468,7 @@ class CategoryPayload {
     return current;
   }
 
-  // ============================================================
   // LIST → ROWS
-  // ============================================================
 
   static List<Map<String, dynamic>> _asRows(
     dynamic value,
@@ -501,9 +487,8 @@ class CategoryPayload {
   }
 }
 
-// ============================================================
+
 // SYNC RESULT
-// ============================================================
 
 class CategorySyncResult {
   const CategorySyncResult({

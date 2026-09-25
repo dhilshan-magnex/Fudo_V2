@@ -31,7 +31,6 @@ class _DataSyncDialogState
     return showDialog<void>(
       context: context,
       builder: (_) => const AuthorizationDialog(
-        message: 'You do not have permission to use Data Sync.',
       ),
     );
   }
@@ -114,6 +113,7 @@ class _DataSyncDialogState
 
       _message =
           'Data synchronization completed successfully.\n\n'
+          'AppLicense: ${result.appLicense.savedCount}\n'
           'Categories: ${result.categories.total}\n'
           'Category Levels: ${result.catLevels.total}\n'
           'Credit Cards: ${result.creditCards.savedCount}\n'
