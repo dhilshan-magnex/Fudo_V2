@@ -192,17 +192,17 @@ class _DataSyncDialogState
 
                 const SizedBox(width: 12),
 
-                Expanded(
-                  child: HomeActionButton(
-                    icon: Icons.close,
-                    label: 'Cancel',
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                      ).pop();
-                    },
-                  ),
-                ),
+                // Expanded(
+                //   child: HomeActionButton(
+                //     icon: Icons.close,
+                //     label: 'Cancel',
+                //     onTap: () {
+                //       Navigator.of(
+                //         context,
+                //       ).pop();
+                //     },
+                //   ),
+                // ),
               ],
             ),
           ],

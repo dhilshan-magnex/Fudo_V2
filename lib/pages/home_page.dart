@@ -7,7 +7,7 @@ import 'data_sync.dart';
 import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
 import '../widgets/button.dart';
-import '../widgets/layout.dart';
+import '../layout/layout.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -132,13 +132,7 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-
-          portraitSideContent: HomeActionPanel(
-            wrapButtons: true,
-            buttons: _homeButtons(context),
-          ),
-
-          landscapeSideContent: HomeActionPanel(
+          sideContent: HomeActionPanel(
             wrapButtons: true,
             buttons: _homeButtons(context),
           ),

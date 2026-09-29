@@ -15,17 +15,21 @@ class HomeActionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final buttonWidth = wrapButtons
-            ? (constraints.maxWidth - 15) / 2
-            : constraints.maxWidth;
+        final isMobile = constraints.maxWidth < 700;
+        final columnCount = isMobile ? 2 : 4;
+        final gap = 13.0;
+        final availableWidth = constraints.maxWidth;
+        final totalGap = gap * (columnCount - 1);
+        final itemWidth = (availableWidth - totalGap) / columnCount;
+
         final sizedButtons = buttons
-            .map((button) => SizedBox(width: buttonWidth, child: button))
+            .map((button) => SizedBox(width: itemWidth, child: button))
             .toList();
 
         if (wrapButtons) {
           return Wrap(
-            spacing: 13,
-            runSpacing: 13,
+            spacing: gap,
+            runSpacing: gap,
             alignment: WrapAlignment.start,
             children: sizedButtons,
           );
