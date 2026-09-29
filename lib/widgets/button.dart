@@ -59,20 +59,31 @@ class HomeActionButton extends StatelessWidget {
 //Button Design
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1200;
+
     return SizedBox(
       child: TextButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: GlobalColors.buttonIconSize),
+        icon: Icon(
+          icon,
+          size: isDesktop ? 28 : GlobalColors.buttonIconSize,
+        ),
         label: Text(label),
         style: TextButton.styleFrom(
           foregroundColor: GlobalColors.buttonForeground(
             GlobalColors.buttonBackground,
           ),
           backgroundColor: GlobalColors.buttonBackground,
-          minimumSize: GlobalColors.buttonMinimumSize,
-          padding: GlobalColors.buttonPadding,
+          minimumSize: Size.fromHeight(isDesktop ? 68 : 56),
+          padding: EdgeInsets.symmetric(
+            vertical: isDesktop ? 16 : 12,
+            horizontal: 12,
+          ),
           alignment: Alignment.centerLeft,
-          textStyle: GlobalColors.buttonTextStyle,
+          textStyle: TextStyle(
+            fontSize: isDesktop ? 16 : GlobalColors.buttonTextStyle.fontSize,
+            fontWeight: GlobalColors.buttonTextStyle.fontWeight,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: GlobalColors.divider, width: 1),

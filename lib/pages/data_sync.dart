@@ -151,7 +151,7 @@ class _DataSyncDialogState
   ) {
     return AlertDialog(
       title: const Text(
-        'Category Data Sync',
+        'Data Sync',
       ),
 
       content: Column(
@@ -170,41 +170,38 @@ class _DataSyncDialogState
           if (!_isSyncing) ...[
             const SizedBox(height: 24),
 
-            Row(
-              children: [
-                Expanded(
-                  child: HomeActionButton(
-                    icon: _syncComplete
-                        ? Icons.check
-                        : Icons.sync,
-                    label: _syncComplete
-                        ? 'Done'
-                        : 'Sync',
-                    onTap: _syncComplete
-                        ? () {
-                            Navigator.of(
-                              context,
-                            ).pop();
-                          }
-                        : _startSync,
+            if (_syncComplete)
+              HomeActionButton(
+                icon: Icons.check,
+                label: 'Done',
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: HomeActionButton(
+                      icon: Icons.sync,
+                      label: 'Sync',
+                      onTap: _startSync,
+                    ),
                   ),
-                ),
 
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Expanded(
-                //   child: HomeActionButton(
-                //     icon: Icons.close,
-                //     label: 'Cancel',
-                //     onTap: () {
-                //       Navigator.of(
-                //         context,
-                //       ).pop();
-                //     },
-                //   ),
-                // ),
-              ],
-            ),
+                  Expanded(
+                    child: HomeActionButton(
+                      icon: Icons.close,
+                      label: 'Cancel',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ],
+              ),
           ],
         ],
       ),

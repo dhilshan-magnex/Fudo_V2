@@ -12,31 +12,35 @@ class DesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
           padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          sliver: SliverFillRemaining(
+            hasScrollBody: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 primaryContent,
+                const Spacer(),
                 const SizedBox(height: 28),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 980),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: sideContent,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 80),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 980),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: sideContent,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }
