@@ -12,35 +12,52 @@ class TabletLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverFillRemaining(
-            hasScrollBody: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                primaryContent,
-                const Spacer(),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: sideContent,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverFillRemaining(
+                hasScrollBody: true,
+                child: isLandscape
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: primaryContent),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 2, child: sideContent),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          primaryContent,
+                          const Spacer(),
+                          const SizedBox(height: 24),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 80),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 760,
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: sideContent,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
