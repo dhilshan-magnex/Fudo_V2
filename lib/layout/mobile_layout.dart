@@ -14,30 +14,36 @@ class MobileLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isLandscape =
-            constraints.maxWidth > constraints.maxHeight;
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: isLandscape
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: primaryContent),
-                      const SizedBox(width: 20),
-                      Expanded(flex: 2, child: sideContent),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      primaryContent,
-                      const SizedBox(height: 20),
-                      sideContent,
-                    ],
-                  ),
+        if (isLandscape) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: primaryContent),
+                const SizedBox(width: 20),
+                Expanded(flex: 2, child: sideContent),
+              ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 60),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: primaryContent,
+                ),
+              ),
+              const SizedBox(height: 24),
+              sideContent,
+            ],
           ),
         );
       },

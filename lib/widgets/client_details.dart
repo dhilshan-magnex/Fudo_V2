@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/global_colors.dart';
+import 'label.dart';
 import 'status_chip.dart';
 
 class ClientDetails extends StatelessWidget {
@@ -41,7 +42,7 @@ class ClientDetails extends StatelessWidget {
           ),
 
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: 8),
 
             child: Divider(
               height: 1,
@@ -50,63 +51,44 @@ class ClientDetails extends StatelessWidget {
             ),
           ),
 
-          Row(
-            children: [
-              Expanded(
-                child: _InfoRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Client ID',
-                  value: clientId,
-                ),
+          // Keep the desktop information rows compact while preserving a
+          // consistent left-label/right-value alignment on every screen size.
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ClientDetailLabel(
+                    icon: Icons.badge_outlined,
+                    label: 'Client ID',
+                    value: clientId,
+                  ),
+                  const SizedBox(height: 6),
+                  ClientDetailLabel(
+                    icon: Icons.person_outline,
+                    label: 'Log User',
+                    value: userName,
+                  ),
+                  const SizedBox(height: 6),
+                  ClientDetailLabel(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Date',
+                    value: _formatDate(currentDateTime),
+                  ),
+                  const SizedBox(height: 6),
+                  ClientDetailLabel(
+                    icon: Icons.access_time,
+                    label: 'Time',
+                    value: _formatTime(currentDateTime),
+                  ),
+                  const SizedBox(height: 6),
+                  StatusChip(label: 'Status', value: status),
+                  const SizedBox(height: 6),
+                  StatusChip(label: 'License valid', value: licenseValid),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _InfoRow(
-                  icon: Icons.person_outline,
-                  label: 'Log User',
-                  value: userName,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: _InfoRow(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Date',
-                  value: _formatDate(currentDateTime),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _InfoRow(
-                  icon: Icons.access_time,
-                  label: 'Time',
-                  value: _formatTime(currentDateTime),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: StatusChip(label: 'Status', value: status),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: StatusChip(
-                  label: 'License valid',
-                  value: licenseValid,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -131,46 +113,5 @@ class ClientDetails extends StatelessWidget {
     final second = dateTime.second.toString().padLeft(2, '0');
 
     return '$hour:$minute:$second';
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: GlobalColors.secondaryText),
-
-        const SizedBox(width: 7),
-
-        Text(label, style: GlobalColors.infoLabelTextStyle),
-
-        const SizedBox(width: 12),
-
-        Expanded(
-          child: Text(
-            value.isEmpty ? '-' : value,
-
-            textAlign: TextAlign.right,
-
-            maxLines: 1,
-
-            overflow: TextOverflow.ellipsis,
-
-            style: GlobalColors.infoValueTextStyle,
-          ),
-        ),
-      ],
-    );
   }
 }

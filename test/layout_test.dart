@@ -71,4 +71,25 @@ void main() {
       greaterThan(tester.getTopLeft(find.byKey(const Key('primary'))).dy),
     );
   });
+
+  testWidgets('mobile layout supports LayoutBuilder content', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 360,
+          height: 640,
+          child: MobileLayout(
+            primaryContent: LayoutBuilder(
+              builder: (context, constraints) => const Text('Primary content'),
+            ),
+            sideContent: LayoutBuilder(
+              builder: (context, constraints) => const Text('Side content'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
 }
