@@ -8,6 +8,7 @@ import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
 import '../widgets/button.dart';
 import '../layout/layout.dart';
+import '../utils/global_colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,51 +21,58 @@ class _HomePageState extends State<HomePage> {
   final _clientService = ClientService();
 
   void _openDataSync() {
-    showDialog<void>(
-      context: context,
-      builder: (_) => const DataSyncDialog(),
-    );
+    showDialog<void>(context: context, builder: (_) => const DataSyncDialog());
   }
 
   List<HomeActionButton> _homeButtons(BuildContext context) => [
     HomeActionButton(
-      icon: Icons.receipt_long,
+      icon: Icons.receipt_long_outlined,
       label: 'Billing',
+      subtitle: 'Start a new sale',
+      mode: HomeActionButtonMode.featured,
+      backgroundColor: GlobalColors.billingButtonBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
-      icon: Icons.dashboard,
+      icon: Icons.dashboard_outlined,
       label: 'Dashboard',
+      mode: HomeActionButtonMode.tile,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.bar_chart,
       label: 'Reports',
-      onTap: _emptyAction,
-    ),
-    HomeActionButton(
-      icon: Icons.sync,
-      label: 'Data Sync',
-      onTap: _openDataSync,
-    ),
-    HomeActionButton(
-      icon: Icons.point_of_sale,
-      label: 'POS Setting',
-      onTap: _emptyAction,
-    ),
-    HomeActionButton(
-      icon: Icons.switch_account,
-      label: 'Change User',
-      onTap: _emptyAction,
-    ),
-    HomeActionButton(
-      icon: Icons.lock_reset,
-      label: 'Change Password',
+      mode: HomeActionButtonMode.tile,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.attach_money,
       label: 'Cash Out',
+      mode: HomeActionButtonMode.tile,
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.sync,
+      label: 'Data Sync',
+      mode: HomeActionButtonMode.tile,
+      onTap: _openDataSync,
+    ),
+    HomeActionButton(
+      icon: Icons.tune,
+      label: 'POS Setting',
+      mode: HomeActionButtonMode.compact,
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.person_outline,
+      label: 'Change User',
+      mode: HomeActionButtonMode.compact,
+      onTap: _emptyAction,
+    ),
+    HomeActionButton(
+      icon: Icons.lock_outline,
+      label: 'Change Password',
+      mode: HomeActionButtonMode.compact,
       onTap: _emptyAction,
     ),
   ];
@@ -102,21 +110,24 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('FUDO V2'),
-        actions: const [ExitButton()],
-      ),
+    final screenSize = MediaQuery.sizeOf(context);
+    final isMobile = screenSize.shortestSide < 700;
+    final platform = Theme.of(context).platform;
+    final isLargeMobilePlatform =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+    final isTablet =
+        !isMobile && (screenSize.width < 1200 || isLargeMobilePlatform);
 
-      body: SafeArea(
-        child: HomeLayout(
+    return Scaffold(
+      backgroundColor: GlobalColors.homeBackground,
+      body: HomeLayout(
           primaryContent: FutureBuilder<Map<String, dynamic>?>(
             future: _clientInfoFuture,
             builder: (context, snapshot) {
               final clientInfo = snapshot.data;
               final session = context.watch<SessionProvider>();
 
-              return ClientDetails(
+              final clientDetails = ClientDetails(
                 clientName:
                     session.clientName ??
                     clientInfo?['Client_Name']?.toString() ??
@@ -129,6 +140,102 @@ class _HomePageState extends State<HomePage> {
                 status: clientInfo?['Status']?.toString() ?? '',
                 licenseValid: clientInfo?['License_valid']?.toString() ?? '',
                 currentDateTime: _now,
+                mobileHeader: isMobile,
+                tabletHeader: isTablet,
+                desktopHeader: !isMobile && !isTablet,
+              );
+
+              if (isTablet) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'FUDO V2',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: GlobalColors.homeHeaderLabel,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const IconTheme(
+                            data: IconThemeData(color: Colors.white),
+                            child: ExitButton(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    clientDetails,
+                  ],
+                );
+              }
+
+              if (!isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'FUDO V2',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Expanded(child: clientDetails),
+                    const SizedBox(height: 28),
+                    const ExitButton(expanded: true),
+                  ],
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'FUDO V2',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: GlobalColors.homeHeaderLabel,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: IconTheme(
+                          data: const IconThemeData(color: Colors.white),
+                          child: const ExitButton(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  clientDetails,
+                ],
               );
             },
           ),
@@ -136,7 +243,6 @@ class _HomePageState extends State<HomePage> {
             wrapButtons: true,
             buttons: _homeButtons(context),
           ),
-        ),
       ),
     );
   }

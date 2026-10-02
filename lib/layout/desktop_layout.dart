@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/global_colors.dart';
 
 class DesktopLayout extends StatelessWidget {
   const DesktopLayout({
@@ -12,35 +13,40 @@ class DesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(20),
-          sliver: SliverFillRemaining(
-            hasScrollBody: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                primaryContent,
-                const Spacer(),
-                const SizedBox(height: 28),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 980),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: sideContent,
-                      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final railWidth = (constraints.maxWidth * .28)
+            .clamp(360.0, 560.0)
+            .toDouble();
+        return ColoredBox(
+          color: GlobalColors.homeBackground,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: railWidth,
+                child: ColoredBox(
+                  color: GlobalColors.homeHeaderBackground,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(56, 54, 56, 40),
+                      child: primaryContent,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(48),
+                    child: sideContent,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

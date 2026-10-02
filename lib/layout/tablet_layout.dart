@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/global_colors.dart';
 
 class TabletLayout extends StatelessWidget {
   const TabletLayout({
@@ -16,46 +17,76 @@ class TabletLayout extends StatelessWidget {
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
+        if (isLandscape) {
+          final railWidth = (constraints.maxWidth * 0.273)
+              .clamp(260.0, 320.0)
+              .toDouble();
+
+          return SafeArea(
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              sliver: SliverFillRemaining(
-                hasScrollBody: true,
-                child: isLandscape
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 3, child: primaryContent),
-                          const SizedBox(width: 24),
-                          Expanded(flex: 2, child: sideContent),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          primaryContent,
-                          const Spacer(),
-                          const SizedBox(height: 24),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 80),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 760,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: sideContent,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: railWidth,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: GlobalColors.homeHeaderBackground,
+                        borderRadius: BorderRadius.circular(28),
                       ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                        child: primaryContent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: GlobalColors.homeBackground,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                        child: sideContent,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          );
+        }
+
+        return ColoredBox(
+          color: GlobalColors.homeBackground,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: GlobalColors.homeHeaderBackground,
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(32),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(32, 24, 32, 28),
+                      child: primaryContent,
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(32, 22, 32, 32),
+                sliver: SliverToBoxAdapter(child: sideContent),
+              ),
+            ],
+          ),
         );
       },
     );
