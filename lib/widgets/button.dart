@@ -20,32 +20,22 @@ class HomeActionPanel extends StatelessWidget {
         final isDesktop = screenSize.width >= 1200;
         if (wrapButtons && isDesktop && buttons.length >= 8) {
           const gap = 24.0;
-          final panelHeight = constraints.maxHeight.isFinite
-              ? constraints.maxHeight
-              : screenSize.height - 96;
-          final rowHeight = ((panelHeight - gap * 2) / 3)
-              .clamp(180.0, 420.0)
-              .toDouble();
           final columnWidth = (constraints.maxWidth - gap * 2) / 3;
           final coreButtons = buttons.skip(1).take(4).toList();
           final compactButtons = buttons.skip(5).toList();
 
-          Widget buildRow(List<HomeActionButton> rowButtons) => SizedBox(
-            height: rowHeight,
-            child: Row(
-              children: [
-                for (var index = 0; index < rowButtons.length; index++) ...[
-                  if (index > 0) const SizedBox(width: gap),
-                  Expanded(child: rowButtons[index]),
-                ],
+          Widget buildRow(List<HomeActionButton> rowButtons) => Row(
+            children: [
+              for (var index = 0; index < rowButtons.length; index++) ...[
+                if (index > 0) const SizedBox(width: gap),
+                Expanded(child: rowButtons[index]),
               ],
-            ),
+            ],
           );
 
           return Column(
             children: [
-              SizedBox(
-                height: rowHeight,
+              Expanded(
                 child: Row(
                   children: [
                     SizedBox(width: columnWidth * 2 + gap, child: buttons.first),
@@ -55,9 +45,9 @@ class HomeActionPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: gap),
-              buildRow(coreButtons.skip(1).take(3).toList()),
+              Expanded(child: buildRow(coreButtons.skip(1).take(3).toList())),
               const SizedBox(height: gap),
-              buildRow(compactButtons),
+              Expanded(child: buildRow(compactButtons)),
             ],
           );
         }
