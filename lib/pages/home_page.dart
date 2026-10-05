@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/client_service.dart';
 import '../session/session_provider.dart';
 import 'data_sync.dart';
+import 'billing_page.dart';
 import '../widgets/client_details.dart';
 import '../widgets/exit_button.dart';
 import '../widgets/button.dart';
@@ -31,7 +32,9 @@ class _HomePageState extends State<HomePage> {
       subtitle: 'Start a new sale',
       mode: HomeActionButtonMode.featured,
       backgroundColor: GlobalColors.billingButtonBackground,
-      onTap: _emptyAction,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const BillingPage()),
+      ),
     ),
     HomeActionButton(
       icon: Icons.dashboard_outlined,
@@ -155,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                           child: Text(
                             'FUDO V2',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: GlobalColors.homeHeaderForeground,
                               fontSize: 26,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.2,
@@ -171,7 +174,9 @@ class _HomePageState extends State<HomePage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const IconTheme(
-                            data: IconThemeData(color: Colors.white),
+                            data: IconThemeData(
+                              color: GlobalColors.homeHeaderForeground,
+                            ),
                             child: ExitButton(),
                           ),
                         ),
@@ -190,7 +195,7 @@ class _HomePageState extends State<HomePage> {
                     const Text(
                       'FUDO V2',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: GlobalColors.homeHeaderForeground,
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
@@ -213,7 +218,7 @@ class _HomePageState extends State<HomePage> {
                         child: Text(
                           'FUDO V2',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: GlobalColors.homeHeaderForeground,
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
                           ),
@@ -228,7 +233,9 @@ class _HomePageState extends State<HomePage> {
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: IconTheme(
-                          data: const IconThemeData(color: Colors.white),
+                          data: const IconThemeData(
+                            color: GlobalColors.homeHeaderForeground,
+                          ),
                           child: const ExitButton(),
                         ),
                       ),

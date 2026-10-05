@@ -2,6 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../utils/global_colors.dart';
 
+/// A reusable single-line label for page headings and table labels.
+class AppLabel extends StatelessWidget {
+  const AppLabel(
+    this.text, {
+    super.key,
+    required this.style,
+    this.maxLines = 1,
+    this.overflow = TextOverflow.ellipsis,
+  });
+
+  final String text;
+  final TextStyle style;
+  final int maxLines;
+  final TextOverflow overflow;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        maxLines: maxLines,
+        overflow: overflow,
+        style: style,
+      );
+}
+
 class ClientDetailLabel extends StatelessWidget {
   const ClientDetailLabel({
     super.key,

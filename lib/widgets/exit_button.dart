@@ -18,11 +18,11 @@ class ExitButton extends StatelessWidget {
           icon: const Icon(Icons.logout_rounded),
           label: const Text('Log out'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
+            backgroundColor: GlobalColors.homeHeaderForeground,
+            foregroundColor: GlobalColors.homeHeaderBackground,
             alignment: Alignment.centerLeft,
-            side: const BorderSide(color: GlobalColors.homeHeaderLabel),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(10),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 18),
           ),
@@ -30,7 +30,11 @@ class ExitButton extends StatelessWidget {
       );
     }
 
-    return IconButton(
+    return IconButton.filled(
+      style: IconButton.styleFrom(
+        backgroundColor: GlobalColors.homeHeaderForeground,
+        foregroundColor: GlobalColors.homeHeaderBackground,
+      ),
       tooltip: 'Exit',
       icon: const Icon(Icons.exit_to_app),
       onPressed: SystemNavigator.pop,

@@ -1,6 +1,50 @@
 import 'package:flutter/material.dart';
 import '../utils/global_colors.dart';
 
+/// A compact, icon-led action button for order-flow screens.
+class BillingActionButton extends StatelessWidget {
+  const BillingActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.outlined = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 150;
+          return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: compact ? 18 : 28),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        style: OutlinedButton.styleFrom(
+          foregroundColor:
+              outlined ? GlobalColors.billingIcon : GlobalColors.homeHeaderForeground,
+          backgroundColor:
+              outlined ? Colors.white : GlobalColors.homeActionBackground,
+          side: BorderSide(
+            color: outlined ? GlobalColors.billingOutline : Colors.transparent,
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 16),
+          textStyle: TextStyle(
+            fontSize: compact ? 14 : 25,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
+        },
+      );
+}
+
 class HomeActionPanel extends StatelessWidget {
   const HomeActionPanel({
     super.key,
