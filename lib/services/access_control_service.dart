@@ -8,6 +8,12 @@ class AccessControlService {
     required String screenId,
     required String functionId,
   }) async {
+    // Administrators must not be blocked by a missing or out-of-date
+    // per-screen row in a locally cached desktop database.
+    if (_isAdministratorGroup(groupCode)) {
+      return true;
+    }
+
     final database = await DBManager.getDatabase(
       AppDatabase.fudo,
     );
@@ -39,5 +45,14 @@ class AccessControlService {
         0;
 
     return accessLevel == 1;
+  }
+
+  static bool _isAdministratorGroup(String groupCode) {
+    final normalized = groupCode
+        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .toUpperCase();
+    return normalized == 'ADMIN' ||
+        normalized == 'ADMINISTRATOR' ||
+        normalized == 'SUPERADMIN';
   }
 }

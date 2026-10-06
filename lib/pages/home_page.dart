@@ -40,42 +40,49 @@ class _HomePageState extends State<HomePage> {
       icon: Icons.dashboard_outlined,
       label: 'Dashboard',
       mode: HomeActionButtonMode.tile,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.bar_chart,
       label: 'Reports',
       mode: HomeActionButtonMode.tile,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.attach_money,
       label: 'Cash Out',
       mode: HomeActionButtonMode.tile,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.sync,
       label: 'Data Sync',
       mode: HomeActionButtonMode.tile,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _openDataSync,
     ),
     HomeActionButton(
       icon: Icons.tune,
       label: 'POS Setting',
       mode: HomeActionButtonMode.compact,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.person_outline,
       label: 'Change User',
       mode: HomeActionButtonMode.compact,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
     HomeActionButton(
       icon: Icons.lock_outline,
       label: 'Change Password',
       mode: HomeActionButtonMode.compact,
+      backgroundColor: GlobalColors.homeActionBackground,
       onTap: _emptyAction,
     ),
   ];
@@ -113,13 +120,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.sizeOf(context);
-    final isMobile = screenSize.shortestSide < 700;
-    final platform = Theme.of(context).platform;
-    final isLargeMobilePlatform =
-        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
-    final isTablet =
-        !isMobile && (screenSize.width < 1200 || isLargeMobilePlatform);
+    final layoutType = AppLayoutType.fromContext(context);
+    final isMobile = layoutType.isMobile;
+    final isTablet = layoutType.isTablet;
 
     return Scaffold(
       backgroundColor: GlobalColors.homeBackground,
@@ -145,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                 currentDateTime: _now,
                 mobileHeader: isMobile,
                 tabletHeader: isTablet,
-                desktopHeader: !isMobile && !isTablet,
+                desktopHeader: layoutType.isDesktop,
               );
 
               if (isTablet) {

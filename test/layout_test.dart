@@ -8,6 +8,41 @@ import 'package:fudo_v2/widgets/button.dart';
 import 'package:fudo_v2/widgets/client_details.dart';
 
 void main() {
+  test('layout type centralizes platform and breakpoint selection', () {
+    expect(
+      AppLayoutType.resolve(
+        maxWidth: 360,
+        screenSize: const Size(360, 640),
+        platform: TargetPlatform.android,
+      ),
+      AppLayoutType.mobile,
+    );
+    expect(
+      AppLayoutType.resolve(
+        maxWidth: 800,
+        screenSize: const Size(800, 1024),
+        platform: TargetPlatform.android,
+      ),
+      AppLayoutType.tablet,
+    );
+    expect(
+      AppLayoutType.resolve(
+        maxWidth: 1600,
+        screenSize: const Size(1600, 900),
+        platform: TargetPlatform.windows,
+      ),
+      AppLayoutType.desktop,
+    );
+    expect(
+      AppLayoutType.resolve(
+        maxWidth: 1600,
+        screenSize: const Size(1600, 900),
+        platform: TargetPlatform.android,
+      ),
+      AppLayoutType.tablet,
+    );
+  });
+
   testWidgets('responsive home layout renders primary and side content', (
     tester,
   ) async {
@@ -327,10 +362,7 @@ void main() {
       dashboardButton.style?.backgroundColor?.resolve({}),
       GlobalColors.homeHeaderBackground,
     );
-    expect(
-      posSettingButton.style?.backgroundColor?.resolve({}),
-      Colors.white,
-    );
+    expect(posSettingButton.style?.backgroundColor?.resolve({}), Colors.white);
     expect(
       tester.getTopLeft(billing).dy,
       closeTo(tester.getTopLeft(dashboard).dy, 0.1),

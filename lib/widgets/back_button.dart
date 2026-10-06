@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'button.dart';
-import '../utils/global_colors.dart';
 
 /// A shared Back action that returns to the previous route by default.
 class FudoBackButton extends StatelessWidget {
@@ -10,7 +9,7 @@ class FudoBackButton extends StatelessWidget {
     this.onPressed,
     this.label = 'Back',
     this.mode = HomeActionButtonMode.compact,
-    this.backgroundColor = GlobalColors.homeActionBackground,
+    this.backgroundColor = Colors.white,
   });
 
   final VoidCallback? onPressed;
@@ -24,6 +23,7 @@ class FudoBackButton extends StatelessWidget {
         label: label,
         mode: mode,
         backgroundColor: backgroundColor,
+        compactInline: true,
         onTap: onPressed ?? () => Navigator.maybePop(context),
       );
 }

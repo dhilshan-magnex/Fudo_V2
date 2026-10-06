@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database/api_route_registry.dart';
 import '../function/app_functions.dart';
+import '../layout/layout.dart';
 import '../widgets/authorization.dart';
 import 'package:provider/provider.dart';
 import '../session/session_provider.dart';
@@ -152,8 +153,9 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
-    final isMobile = screenSize.shortestSide < 700;
-    final isTablet = !isMobile && screenSize.shortestSide >= 700;
+    final layoutType = AppLayoutType.fromContext(context);
+    final isMobile = layoutType.isMobile;
+    final isTablet = layoutType.isTablet;
 
     return Dialog(
       backgroundColor: Colors.transparent,

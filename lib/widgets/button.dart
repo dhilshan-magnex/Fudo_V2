@@ -318,6 +318,7 @@ class HomeActionButton extends StatelessWidget {
     this.subtitle,
     this.mode = HomeActionButtonMode.tile,
     this.backgroundColor,
+    this.compactInline = false,
   });
 
   final IconData icon;
@@ -326,6 +327,8 @@ class HomeActionButton extends StatelessWidget {
   final String? subtitle;
   final HomeActionButtonMode mode;
   final Color? backgroundColor;
+  /// Uses a horizontal compact action for short, toolbar-style slots.
+  final bool compactInline;
 
   @override
   Widget build(BuildContext context) {
@@ -421,6 +424,12 @@ class HomeActionButton extends StatelessWidget {
     if (!isMobile) {
       if (isTablet || screenSize.width >= 1200) {
         final buttonRadius = mode == HomeActionButtonMode.featured ? 22.0 : 20.0;
+        // Compact actions are also used in the desktop rail header (for
+        // example, the Back button).  That header intentionally gives the
+        // action a short 56 px slot, which cannot accommodate the desktop
+        // icon-over-label column plus its normal padding.
+        final useInlineCompactLayout =
+            mode == HomeActionButtonMode.compact && compactInline;
         final buttonChild = switch (mode) {
           HomeActionButtonMode.featured => Row(
             children: [
@@ -468,22 +477,41 @@ class HomeActionButton extends StatelessWidget {
               ),
             ],
           ),
-          HomeActionButtonMode.compact => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 30),
-              const Spacer(),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+          HomeActionButtonMode.compact => useInlineCompactLayout
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 20),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(icon, size: 30),
+                    const Spacer(),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         };
 
         return TextButton(
@@ -492,7 +520,11 @@ class HomeActionButton extends StatelessWidget {
             foregroundColor: buttonForeground,
             backgroundColor: buttonBackground,
             padding: EdgeInsets.all(
-              mode == HomeActionButtonMode.featured ? 32 : 24,
+              useInlineCompactLayout
+                  ? 8
+                  : mode == HomeActionButtonMode.featured
+                      ? 32
+                      : 24,
             ),
             alignment: Alignment.centerLeft,
             shape: RoundedRectangleBorder(
