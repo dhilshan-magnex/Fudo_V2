@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'session/session_provider.dart';
+import 'session/running_orders_store.dart';
 import 'pages/login_page.dart';
 
 void main() {
@@ -17,6 +18,9 @@ void main() {
       providers: [
         ChangeNotifierProvider(
           create: (_) => SessionProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => RunningOrdersStore(),
         ),
       ],
       child: const MyApp(),
