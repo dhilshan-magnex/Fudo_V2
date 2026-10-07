@@ -11,7 +11,7 @@ enum DataSource { sqlite, api }
 
 class DataSourceManager {
   static DataSource getDataSource(String clientId) {
-    if (clientId == '001') {
+    if (clientId == '940T0003') {
       return DataSource.sqlite;
     }
 

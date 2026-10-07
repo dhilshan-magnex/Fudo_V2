@@ -1,14 +1,11 @@
 import '../database/db_manager.dart';
-import '../database/sqlite_class.dart';
 
 class ClientService {
+  /// Reads the locally bundled license record used to establish a session.
+  ///
+  /// This cannot use [SQLiteClass]: its API path needs a session client ID,
+  /// while the license record is what supplies that ID before login.
   Future<Map<String, dynamic>?> getClientInfo() async {
-    final clientInfo = await SQLiteClass.getFirstTableRow(
-      '001',
-      AppDatabase.sys,
-      'App_License',
-    );
-
-    return clientInfo;
+    return DBManager.getClientInfo();
   }
 }

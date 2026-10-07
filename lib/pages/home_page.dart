@@ -6,8 +6,8 @@ import '../session/session_provider.dart';
 import 'data_sync.dart';
 import 'billing_page.dart';
 import '../widgets/client_details.dart';
-import '../widgets/exit_button.dart';
-import '../widgets/button.dart';
+import '../widgets/buttons/exit_button.dart';
+import '../widgets/buttons/button.dart';
 import '../layout/layout.dart';
 import '../utils/global_colors.dart';
 

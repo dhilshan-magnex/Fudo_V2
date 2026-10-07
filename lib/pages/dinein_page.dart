@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../database/db_manager.dart';
-import '../layout/layout.dart';
-import '../utils/global_colors.dart';
-import '../widgets/back_button.dart';
+import '../../database/db_manager.dart';
+import '../../layout/layout.dart';
+import '../../utils/global_colors.dart';
+import '../../widgets/buttons/back_button.dart';
 
 /// Menu browser used when a dine-in order is being created.
 class DineInPage extends StatefulWidget {
