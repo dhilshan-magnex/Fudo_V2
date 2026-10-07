@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../utils/global_colors.dart';
 
 enum AppButtonVariant { filled, outlined, compact, text }

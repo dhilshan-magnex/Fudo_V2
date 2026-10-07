@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../function/app_functions.dart';
-import '../layout/layout.dart';
-import '../services/access_control_service.dart';
-import '../session/session_provider.dart';
-import '../utils/global_colors.dart';
-import '../widgets/authorization.dart';
-import '../widgets/buttons/back_button.dart';
-import '../widgets/buttons/button.dart';
+import '../../function/app_functions.dart';
+import '../../layout/layout.dart';
+import '../../services/access_control_service.dart';
+import '../../session/session_provider.dart';
+import '../../utils/global_colors.dart';
+import '../../widgets/authorization.dart';
+import '../../widgets/buttons/back_button.dart';
+import '../../widgets/buttons/button.dart';
 import 'dinein_page.dart';
 import 'table_page.dart';
 

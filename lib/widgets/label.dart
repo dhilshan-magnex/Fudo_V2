@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../utils/global_colors.dart';
 
 /// A reusable single-line label for page headings and table labels.

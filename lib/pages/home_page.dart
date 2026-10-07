@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/client_service.dart';
 import '../session/session_provider.dart';
 import 'data_sync.dart';
-import 'billing_page.dart';
+import 'billing/billing_page.dart';
 import '../widgets/client_details.dart';
 import '../widgets/buttons/exit_button.dart';
 import '../widgets/buttons/button.dart';

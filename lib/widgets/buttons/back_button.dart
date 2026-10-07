@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'button.dart';
 
 /// A shared Back action that returns to the previous route by default.
