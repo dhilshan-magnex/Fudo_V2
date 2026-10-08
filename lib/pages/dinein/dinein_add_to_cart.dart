@@ -268,6 +268,233 @@ class _CartButton extends StatelessWidget {
   );
 }
 
+class _DineInCartPage extends StatelessWidget {
+  const _DineInCartPage({
+    required this.cart,
+    required this.updatePage,
+    required this.onConfirm,
+  });
+
+  final Map<String, _CartLine> cart;
+  final void Function(VoidCallback) updatePage;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final subtotal = cart.values.fold<double>(
+      0,
+      (total, line) => total + line.item.price * line.quantity,
+    );
+    final itemCount = cart.values.fold<int>(
+      0,
+      (total, line) => total + line.quantity,
+    );
+
+    void changeQuantity(_CartLine line, int change) {
+      updatePage(() {
+        final quantity = line.quantity + change;
+        if (quantity <= 0) {
+          cart.remove(line.item.id);
+        } else {
+          cart[line.item.id] = _CartLine(line.item, quantity);
+        }
+      });
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppPalette.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: GlobalColors.billingCardBorder),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: GlobalColors.homeActionBackground,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Your cart ($itemCount items)',
+                    style: const TextStyle(
+                      color: GlobalColors.primaryText,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: GlobalColors.billingCardBorder),
+          Expanded(
+            child: cart.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Your cart is empty.',
+                      style: TextStyle(color: GlobalColors.secondaryText),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(8),
+                    children: [
+                      for (final line in cart.values.toList())
+                        Card(
+                          color: AppPalette.white,
+                          elevation: 0,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(
+                              color: GlobalColors.billingCardBorder,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        line.item.name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: GlobalColors.primaryText,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 36,
+                                            height: 36,
+                                          ),
+                                      padding: EdgeInsets.zero,
+                                      tooltip: 'Remove item',
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 20,
+                                      ),
+                                      color: GlobalColors.secondaryText,
+                                      onPressed: () =>
+                                          changeQuantity(line, -line.quantity),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Unit price  ${_cartPriceFormat.format(line.item.price)}',
+                                  style: const TextStyle(
+                                    color: GlobalColors.secondaryText,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 36,
+                                            height: 36,
+                                          ),
+                                      padding: EdgeInsets.zero,
+                                      tooltip: 'Decrease quantity',
+                                      icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                        size: 20,
+                                      ),
+                                      color: GlobalColors.homeActionBackground,
+                                      onPressed: () => changeQuantity(line, -1),
+                                    ),
+                                    Text('${line.quantity}'),
+                                    IconButton(
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 36,
+                                            height: 36,
+                                          ),
+                                      padding: EdgeInsets.zero,
+                                      tooltip: 'Increase quantity',
+                                      icon: const Icon(
+                                        Icons.add_circle_outline,
+                                        size: 20,
+                                      ),
+                                      color: GlobalColors.homeActionBackground,
+                                      onPressed: () => changeQuantity(line, 1),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      _cartPriceFormat.format(
+                                        line.item.price * line.quantity,
+                                      ),
+                                      style: const TextStyle(
+                                        color: GlobalColors.primaryText,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Subtotal',
+                  style: TextStyle(
+                    color: GlobalColors.primaryText,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  _cartPriceFormat.format(subtotal),
+                  style: const TextStyle(
+                    color: GlobalColors.homeActionBackground,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: cart.isEmpty ? null : onConfirm,
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Confirm order'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: GlobalColors.homeActionBackground,
+                  foregroundColor: GlobalColors.homeHeaderForeground,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CartLine {
   const _CartLine(this.item, this.quantity);
   final DineInMenuItem item;

@@ -51,7 +51,7 @@ class _OrderTypeActions extends StatelessWidget {
                 );
               } else if (action.label == 'Dine In') {
                 Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const DineInPage()),
+                  MaterialPageRoute<bool>(builder: (_) => const DineInPage()),
                 );
               }
             },

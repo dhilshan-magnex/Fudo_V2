@@ -92,7 +92,9 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 
     try {
       final result = await ApiRouteRegistry.syncAll(
-        clearExistingData: false,
+        // A manual Data Sync is a full refresh: remove records that are no
+        // longer returned by the server before saving this sync's data.
+        clearExistingData: true,
         onProgress: (progress) {
           if (!mounted) {
             return;

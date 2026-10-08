@@ -106,7 +106,9 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                       IconButton(
                         tooltip: 'Close',
                         color: Colors.white,
-                        onPressed: () => Navigator.of(context).pop(false),
+                        // This dialog returns _TableOrderDetails on confirm;
+                        // dismissal should return null, not a bool.
+                        onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.close_rounded),
                       ),
                     ],
@@ -152,7 +154,7 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                           label: 'Back',
                           icon: Icons.arrow_back_rounded,
                           outlined: true,
-                          onPressed: () => Navigator.of(context).pop(false),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ),
                       const SizedBox(width: 12),

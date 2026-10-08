@@ -41,7 +41,7 @@ class _BillingHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            'View running orders or start a new sale',
+            'View running orders or start a new order',
             style: TextStyle(
               color: GlobalColors.homeHeaderLabel,
               fontSize: 14,

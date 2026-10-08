@@ -16,12 +16,8 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => SessionProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => RunningOrdersStore(),
-        ),
+        ChangeNotifierProvider(create: (_) => SessionProvider()),
+        ChangeNotifierProvider(create: (_) => RunningOrdersStore()),
       ],
       child: const MyApp(),
     ),

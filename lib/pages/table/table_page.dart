@@ -112,9 +112,8 @@ class _TablePageState extends State<TablePage> {
           }
 
           final data = snapshot.data!;
-          final activeSection = data.sections.any(
-                    (section) => section.id == _selectedSectionId,
-                  )
+          final activeSection =
+              data.sections.any((section) => section.id == _selectedSectionId)
               ? _selectedSectionId
               : (data.sections.isEmpty ? null : data.sections.first.id);
           final visibleTables = data.tables

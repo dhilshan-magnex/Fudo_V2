@@ -14,6 +14,7 @@ class ClientDetails extends StatelessWidget {
     required this.currentDateTime,
     this.mobileHeader = false,
     this.tabletHeader = false,
+    this.tabletStatusAtBottom = false,
     this.desktopHeader = false,
   });
 
@@ -25,7 +26,10 @@ class ClientDetails extends StatelessWidget {
   final DateTime currentDateTime;
   final bool mobileHeader;
   final bool tabletHeader;
+  final bool tabletStatusAtBottom;
   final bool desktopHeader;
+
+  bool get _showClientName => clientName.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -33,31 +37,25 @@ class ClientDetails extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            clientName.isEmpty ? 'Client Name' : clientName,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: GlobalColors.homeHeaderLabel,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          if (_showClientName)
+            Text(
+              clientName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: GlobalColors.homeHeaderLabel,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 28),
-            child: Divider(height: 1, color: Color(0x33AFC4C4)),
-          ),
-          _mobileDetail('CLIENT ID', clientId),
-          const SizedBox(height: 24),
-          _mobileDetail('USER', userName),
-          const SizedBox(height: 24),
-          _mobileDetail('DATE', _formatDate(currentDateTime)),
-          const SizedBox(height: 24),
-          _mobileDetail('TIME', _formatTime(currentDateTime)),
+          if (_showClientName)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Divider(height: 1, color: Color(0x33AFC4C4)),
+            ),
+          _headerDetails(rowGap: 24),
           const Spacer(),
-          _mobileStatus('Status', status),
-          const SizedBox(height: 18),
-          _mobileStatus('License', licenseValid),
+          _headerStatuses(),
         ],
       );
     }
@@ -66,55 +64,24 @@ class ClientDetails extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            clientName.isEmpty ? 'Client Name' : clientName,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: GlobalColors.homeHeaderLabel,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          if (_showClientName)
+            Text(
+              clientName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: GlobalColors.homeHeaderLabel,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 26),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final details = [
-                _mobileDetail('CLIENT ID', clientId),
-                _mobileDetail('USER', userName),
-                _mobileDetail('DATE', _formatDate(currentDateTime)),
-                _mobileDetail('TIME', _formatTime(currentDateTime)),
-              ];
-              if (constraints.maxWidth >= 560) {
-                return Row(
-                  children: [
-                    for (var index = 0; index < details.length; index++) ...[
-                      Expanded(child: details[index]),
-                      if (index < details.length - 1) const SizedBox(width: 18),
-                    ],
-                  ],
-                );
-              }
-              return Wrap(
-                runSpacing: 16,
-                children: details
-                    .map((detail) => SizedBox(
-                          width: constraints.maxWidth / 2,
-                          child: detail,
-                        ))
-                    .toList(),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _mobileStatus('Status', status),
-              _mobileStatus('License', licenseValid),
-            ],
-          ),
+          if (_showClientName) const SizedBox(height: 26),
+          _headerDetails(rowGap: 16),
+          if (tabletStatusAtBottom)
+            const Spacer()
+          else
+            const SizedBox(height: 24),
+          _headerStatuses(),
         ],
       );
     }
@@ -128,49 +95,21 @@ class ClientDetails extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 2),
-              Text(
-                clientName.isEmpty ? 'Client Name' : clientName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: GlobalColors.homeHeaderLabel,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              if (_showClientName)
+                Text(
+                  clientName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: GlobalColors.homeHeaderLabel,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(child: _mobileDetail('CLIENT ID', clientId)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _mobileDetail('USER', userName)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _mobileDetail('DATE', _formatDate(currentDateTime)),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _mobileDetail('TIME', _formatTime(currentDateTime)),
-                  ),
-                ],
-              ),
+              if (_showClientName) const SizedBox(height: 18),
+              _headerDetails(rowGap: 12),
               const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _mobileStatus('Status', status),
-                    _mobileStatus('License', licenseValid),
-                  ],
-                ),
-              ),
+              _headerStatuses(),
             ],
           ),
         ),
@@ -263,9 +202,70 @@ class ClientDetails extends StatelessWidget {
     );
   }
 
-  Widget _mobileDetail(String label, String value) {
-    return Column(
+  Widget _headerDetails({required double rowGap}) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _mobileDetail('CLIENT ID', clientId),
+              SizedBox(height: rowGap),
+              _mobileDetail('DATE', _formatDate(currentDateTime)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _mobileDetail('USER', userName, alignRight: true),
+              SizedBox(height: rowGap),
+              _mobileDetail(
+                'TIME',
+                _formatTime(currentDateTime),
+                alignRight: true,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerStatuses() {
+    return Row(
+      children: [
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _mobileStatus('Status', status),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _mobileStatus('License', licenseValid),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _mobileDetail(String label, String value, {bool alignRight = false}) {
+    return Column(
+      crossAxisAlignment: alignRight
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -278,6 +278,7 @@ class ClientDetails extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           value.isEmpty ? '-' : value,
+          textAlign: alignRight ? TextAlign.right : TextAlign.left,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(

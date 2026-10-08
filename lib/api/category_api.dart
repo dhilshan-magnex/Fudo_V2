@@ -29,7 +29,7 @@ class CategoryApi {
     //debugPrint('CATEGORY SYNC STARTED');
     //debugPrint('========================================');
 
-    // Run all three API calls at the same time.
+    // Fetch the category-level endpoints in parallel.
     final results = await Future.wait([
       _fetchCategoryRows(
         categoryLvl1Url ??
@@ -359,7 +359,10 @@ class CategoryApi {
           RegExp(r'[^A-Za-z0-9]'),
           '',
         )
-        .toLowerCase();
+        .toLowerCase()
+        // Some category API versions use `Lvl` while the local schema uses
+        // `Lv` (for example, Cat_Lvl2_Code vs Cat_Lv2_Code).
+        .replaceAll('lvl', 'lv');
   }
 }
 

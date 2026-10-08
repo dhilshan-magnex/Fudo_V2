@@ -61,6 +61,7 @@ class CatLvlApi {
 
     return db.transaction((txn) async {
       if (clearExistingData) {
+        await txn.delete('Category_Lvl3');
         await txn.delete('Category_Lvl2');
         await txn.delete('Category_Lvl1');
       }
@@ -81,10 +82,18 @@ class CatLvlApi {
         requiredColumns: const ['Cat_Code', 'Cat_Lv2_Code'],
       );
 
+      final catLvl3 = await _upsertRows(
+        txn,
+        tableName: 'Category_Lvl3',
+        rows: payload.catLvl3,
+        columns: CatLvlPayload.catLvl3Columns,
+        requiredColumns: const ['Cat_Code', 'Cat_Lv2_Code', 'Cat_Lv3_Code'],
+      );
+
       return CatLvlSyncResult(
         catLvl1: catLvl1,
         catLvl2: catLvl2,
-        catLvl3: 0,
+        catLvl3: catLvl3,
       );
     });
   }
@@ -108,10 +117,21 @@ class CatLvlApi {
 
       if (!hasRequiredColumns) continue;
 
+      // Insert rows that do not yet exist, then update only the language
+      // fields for existing rows. `replace` would delete Cat_Name while
+      // saving Cat_Name2/Cat_Lv2_Name2.
       await txn.insert(
         tableName,
         normalizedRow,
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await txn.update(
+        tableName,
+        normalizedRow,
+        where: requiredColumns.map((column) => '$column = ?').join(' AND '),
+        whereArgs: requiredColumns
+            .map((column) => normalizedRow[column])
+            .toList(),
       );
       savedCount++;
     }
@@ -138,6 +158,37 @@ class CatLvlApi {
   dynamic _readValue(Map<String, dynamic> row, String columnName) {
     if (row.containsKey(columnName)) return row[columnName];
 
+    // The language endpoints provide the translated name as `Cat_Name` /
+    // `Cat_Lv2_Name`. Store those values in the matching *Name2 columns.
+    final apiColumnNames = switch (columnName) {
+      'Cat_Name2' => const ['Cat_Name'],
+      'Cat_Lv2_Name2' => const [
+          'Cat_Lv2_Name',
+          'Cat_Lvl2_Name',
+          'Cat_Lvl2_Name2',
+          'Cat_Name',
+        ],
+      'Cat_Lv3_Name2' => const ['Cat_Lvl3_Name2'],
+      _ => const <String>[],
+    };
+    for (final apiColumnName in apiColumnNames) {
+      if (row.containsKey(apiColumnName)) {
+        return row[apiColumnName];
+      }
+    }
+
+    // API JSON uses lowercase/snake-case keys, for example `cat_name` and
+    // `cat_lv2_name`; resolve the aliases using the same normalization used
+    // for regular database columns.
+    for (final apiColumnName in apiColumnNames) {
+      final normalizedApiColumnName = _normalizeKey(apiColumnName);
+      for (final entry in row.entries) {
+        if (_normalizeKey(entry.key) == normalizedApiColumnName) {
+          return entry.value;
+        }
+      }
+    }
+
     final normalizedColumnName = _normalizeKey(columnName);
 
     for (final entry in row.entries) {
@@ -158,14 +209,15 @@ class CatLvlPayload {
   const CatLvlPayload({
     this.catLvl1 = const [],
     this.catLvl2 = const [],
+    this.catLvl3 = const [],
   });
 
   final List<Map<String, dynamic>> catLvl1;
   final List<Map<String, dynamic>> catLvl2;
+  final List<Map<String, dynamic>> catLvl3;
 
   static const catLvl1Columns = {
     'Cat_Code',
-    'Cat_Name',
     'Cat_Name2',
     'Cat_Type',
     'Color_Code',
@@ -179,9 +231,15 @@ class CatLvlPayload {
   static const catLvl2Columns = {
     'Cat_Code',
     'Cat_Lv2_Code',
-    'Cat_Lv2_Name',
     'Cat_Lv2_Name2',
     'Display_Order_ID',
+  };
+
+  static const catLvl3Columns = {
+    'Cat_Code',
+    'Cat_Lv2_Code',
+    'Cat_Lv3_Code',
+    'Cat_Lv3_Name2',
   };
 
   static List<Map<String, dynamic>> rowsFromJson(dynamic json) {

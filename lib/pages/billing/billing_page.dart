@@ -17,8 +17,9 @@ part 'billing_header.dart';
 part 'billing_order_table.dart';
 part 'billing_buttons.dart';
 
-const _orderIdColumnFlex = 11;
-const _orderTypeColumnFlex = 15;
+const _orderIdColumnFlex = 9;
+const _orderTypeColumnFlex = 10;
+const _orderStatusColumnFlex = 11;
 const _orderActionColumnWidth = 24.0;
 
 class BillingPage extends StatefulWidget {
@@ -104,10 +105,16 @@ class _BillingPageState extends State<BillingPage> {
       );
     }
 
-    final orders = context
-        .watch<RunningOrdersStore>()
-        .orders
-        .map((order) => _RunningOrder(order.billId, order.type, order))
+    final orderStore = context.watch<RunningOrdersStore>();
+    final orders = orderStore.orders
+        .map(
+          (order) => _RunningOrder(
+            order.billId,
+            order.type,
+            order,
+            orderStore.isCompleted(order.billId),
+          ),
+        )
         .toList();
 
     return Scaffold(

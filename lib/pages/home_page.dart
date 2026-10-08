@@ -32,9 +32,9 @@ class _HomePageState extends State<HomePage> {
       subtitle: 'Start a new sale',
       mode: HomeActionButtonMode.featured,
       backgroundColor: GlobalColors.billingButtonBackground,
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const BillingPage()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const BillingPage())),
     ),
     HomeActionButton(
       icon: Icons.dashboard_outlined,
@@ -123,95 +123,38 @@ class _HomePageState extends State<HomePage> {
     final layoutType = AppLayoutType.fromContext(context);
     final isMobile = layoutType.isMobile;
     final isTablet = layoutType.isTablet;
+    final tabletLandscape =
+        isTablet && MediaQuery.orientationOf(context) == Orientation.landscape;
 
     return Scaffold(
       backgroundColor: GlobalColors.homeBackground,
       body: HomeLayout(
-          primaryContent: FutureBuilder<Map<String, dynamic>?>(
-            future: _clientInfoFuture,
-            builder: (context, snapshot) {
-              final clientInfo = snapshot.data;
-              final session = context.watch<SessionProvider>();
+        primaryContent: FutureBuilder<Map<String, dynamic>?>(
+          future: _clientInfoFuture,
+          builder: (context, snapshot) {
+            final clientInfo = snapshot.data;
+            final session = context.watch<SessionProvider>();
 
-              final clientDetails = ClientDetails(
-                clientName:
-                    session.clientName ??
-                    clientInfo?['Client_Name']?.toString() ??
-                    '',
-                clientId:
-                    session.clientId ??
-                    clientInfo?['Client_ID']?.toString() ??
-                    '',
-                userName: session.userName ?? '',
-                status: clientInfo?['Status']?.toString() ?? '',
-                licenseValid: clientInfo?['License_valid']?.toString() ?? '',
-                currentDateTime: _now,
-                mobileHeader: isMobile,
-                tabletHeader: isTablet,
-                desktopHeader: layoutType.isDesktop,
-              );
+            final clientDetails = ClientDetails(
+              clientName:
+                  session.clientName ??
+                  clientInfo?['Client_Name']?.toString() ??
+                  '',
+              clientId:
+                  session.clientId ??
+                  clientInfo?['Client_ID']?.toString() ??
+                  '',
+              userName: session.userName ?? '',
+              status: clientInfo?['Status']?.toString() ?? '',
+              licenseValid: clientInfo?['License_valid']?.toString() ?? '',
+              currentDateTime: _now,
+              mobileHeader: isMobile,
+              tabletHeader: isTablet,
+              tabletStatusAtBottom: tabletLandscape,
+              desktopHeader: layoutType.isDesktop,
+            );
 
-              if (isTablet) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'FUDO V2',
-                            style: TextStyle(
-                              color: GlobalColors.homeHeaderForeground,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: GlobalColors.homeHeaderLabel,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const IconTheme(
-                            data: IconThemeData(
-                              color: GlobalColors.homeHeaderForeground,
-                            ),
-                            child: ExitButton(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    clientDetails,
-                  ],
-                );
-              }
-
-              if (!isMobile) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'FUDO V2',
-                      style: TextStyle(
-                        color: GlobalColors.homeHeaderForeground,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Expanded(child: clientDetails),
-                    const SizedBox(height: 28),
-                    const ExitButton(expanded: true),
-                  ],
-                );
-              }
-
+            if (isTablet) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -222,37 +165,72 @@ class _HomePageState extends State<HomePage> {
                           'FUDO V2',
                           style: TextStyle(
                             color: GlobalColors.homeHeaderForeground,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
                           ),
                         ),
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: GlobalColors.homeHeaderLabel,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: IconTheme(
-                          data: const IconThemeData(
-                            color: GlobalColors.homeHeaderForeground,
-                          ),
-                          child: const ExitButton(),
-                        ),
-                      ),
+                      const ExitButton(),
                     ],
                   ),
-                  clientDetails,
+                  const SizedBox(height: 14),
+                  if (tabletLandscape)
+                    Expanded(child: clientDetails)
+                  else
+                    clientDetails,
                 ],
               );
-            },
-          ),
-          sideContent: HomeActionPanel(
-            wrapButtons: true,
-            buttons: _homeButtons(context),
-          ),
+            }
+
+            if (!isMobile) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'FUDO V2',
+                    style: TextStyle(
+                      color: GlobalColors.homeHeaderForeground,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Expanded(child: clientDetails),
+                  const SizedBox(height: 28),
+                  const ExitButton(expanded: true),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'FUDO V2',
+                        style: TextStyle(
+                          color: GlobalColors.homeHeaderForeground,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const ExitButton(),
+                  ],
+                ),
+                clientDetails,
+              ],
+            );
+          },
+        ),
+        sideContent: HomeActionPanel(
+          wrapButtons: true,
+          buttons: _homeButtons(context),
+        ),
       ),
     );
   }

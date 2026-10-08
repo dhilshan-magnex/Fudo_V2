@@ -8,6 +8,7 @@ class ApiConfig {
 
   static String url(String endpoint) {
     final cleanEndpoint = endpoint.trim().replaceAll(RegExp(r'^/+|/+$'), '');
+    print('$baseUrl/$cleanEndpoint/${SessionProvider.currentClientId}/$locationId');
     return '$baseUrl/$cleanEndpoint/${SessionProvider.currentClientId}/$locationId';
   }
 }
