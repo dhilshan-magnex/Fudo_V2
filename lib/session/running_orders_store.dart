@@ -6,12 +6,14 @@ class ConfirmedOrderItem {
     required this.name,
     required this.quantity,
     required this.unitPrice,
+    this.note = '',
   });
 
   final String id;
   final String name;
   final int quantity;
   final double unitPrice;
+  final String note;
 
   double get subtotal => quantity * unitPrice;
 }
@@ -56,6 +58,35 @@ class RunningOrdersStore extends ChangeNotifier {
     final index = _orders.indexWhere((order) => order.billId == billId);
     if (index == -1) return;
     _completedOrders.insert(0, _orders.removeAt(index));
+    notifyListeners();
+  }
+
+  void addItems(String billId, List<ConfirmedOrderItem> items) {
+    if (items.isEmpty) {
+      throw ArgumentError('At least one item must be added to an order.');
+    }
+
+    final activeIndex = _orders.indexWhere((order) => order.billId == billId);
+    final completedIndex = _completedOrders.indexWhere(
+      (order) => order.billId == billId,
+    );
+    if (activeIndex == -1 && completedIndex == -1) {
+      throw StateError('Order $billId was not found.');
+    }
+
+    final order = activeIndex != -1
+        ? _orders.removeAt(activeIndex)
+        : _completedOrders.removeAt(completedIndex);
+    final updatedOrder = ConfirmedOrder(
+      billId: order.billId,
+      type: order.type,
+      items: List.unmodifiable([...order.items, ...items]),
+      tableNumber: order.tableNumber,
+      customerName: order.customerName,
+      waiterName: order.waiterName,
+      pax: order.pax,
+    );
+    _orders.insert(0, updatedOrder);
     notifyListeners();
   }
 

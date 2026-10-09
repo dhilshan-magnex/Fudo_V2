@@ -7,6 +7,8 @@ void _showDineInCart(
   Map<String, _CartLine> cart,
   void Function(VoidCallback) updatePage,
   VoidCallback onConfirm,
+  String confirmLabel,
+  Future<void> Function(_CartLine) onEditNote,
 ) {
   showModalBottomSheet<void>(
     context: context,
@@ -23,7 +25,11 @@ void _showDineInCart(
             if (quantity <= 0) {
               cart.remove(line.item.id);
             } else {
-              cart[line.item.id] = _CartLine(line.item, quantity);
+              cart[line.item.id] = _CartLine(
+                line.item,
+                quantity,
+                note: line.note,
+              );
             }
           });
           refreshSheet(() {});
@@ -123,6 +129,33 @@ void _showDineInCart(
                                           color: GlobalColors.secondaryText,
                                         ),
                                       ),
+                                      TextButton.icon(
+                                        onPressed: () async {
+                                          await onEditNote(line);
+                                          refreshSheet(() {});
+                                        },
+                                        icon: const Icon(
+                                          Icons.edit_note_rounded,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          line.note.isEmpty
+                                              ? 'Add note'
+                                              : 'Edit note',
+                                        ),
+                                        style: TextButton.styleFrom(
+                                          padding: EdgeInsets.zero,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                      ),
+                                      if (line.note.isNotEmpty)
+                                        Text(
+                                          'Note: ${line.note}',
+                                          style: const TextStyle(
+                                            color: GlobalColors.secondaryText,
+                                            fontSize: 12,
+                                          ),
+                                        ),
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -212,7 +245,7 @@ void _showDineInCart(
                               onConfirm();
                             },
                       icon: const Icon(Icons.check_rounded),
-                      label: const Text('Confirm order'),
+                      label: Text(confirmLabel),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: GlobalColors.homeActionBackground,
                         foregroundColor: GlobalColors.homeHeaderForeground,
@@ -273,11 +306,15 @@ class _DineInCartPage extends StatelessWidget {
     required this.cart,
     required this.updatePage,
     required this.onConfirm,
+    required this.confirmLabel,
+    required this.onEditNote,
   });
 
   final Map<String, _CartLine> cart;
   final void Function(VoidCallback) updatePage;
   final VoidCallback onConfirm;
+  final String confirmLabel;
+  final Future<void> Function(_CartLine) onEditNote;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +333,7 @@ class _DineInCartPage extends StatelessWidget {
         if (quantity <= 0) {
           cart.remove(line.item.id);
         } else {
-          cart[line.item.id] = _CartLine(line.item, quantity);
+          cart[line.item.id] = _CartLine(line.item, quantity, note: line.note);
         }
       });
     }
@@ -397,6 +434,34 @@ class _DineInCartPage extends StatelessWidget {
                                     fontSize: 12,
                                   ),
                                 ),
+                                TextButton.icon(
+                                  onPressed: () => onEditNote(line),
+                                  icon: const Icon(
+                                    Icons.edit_note_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    line.note.isEmpty
+                                        ? 'Add note'
+                                        : 'Edit note',
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 32),
+                                    alignment: Alignment.centerLeft,
+                                  ),
+                                ),
+                                if (line.note.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      'Note: ${line.note}',
+                                      style: const TextStyle(
+                                        color: GlobalColors.secondaryText,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
                                 Row(
                                   children: [
                                     IconButton(
@@ -480,7 +545,7 @@ class _DineInCartPage extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: cart.isEmpty ? null : onConfirm,
                 icon: const Icon(Icons.check_rounded),
-                label: const Text('Confirm order'),
+                label: Text(confirmLabel),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: GlobalColors.homeActionBackground,
                   foregroundColor: GlobalColors.homeHeaderForeground,
@@ -496,7 +561,8 @@ class _DineInCartPage extends StatelessWidget {
 }
 
 class _CartLine {
-  const _CartLine(this.item, this.quantity);
+  const _CartLine(this.item, this.quantity, {this.note = ''});
   final DineInMenuItem item;
   final int quantity;
+  final String note;
 }

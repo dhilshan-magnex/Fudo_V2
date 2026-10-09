@@ -205,31 +205,48 @@ class _DialogField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
 
   @override
-  Widget build(BuildContext context) => TextFormField(
-    controller: controller,
-    textCapitalization: capitalization,
-    keyboardType: keyboardType,
-    validator: validator,
-    style: const TextStyle(color: GlobalColors.primaryText),
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Color.fromARGB(255, 87, 88, 88)),
-      prefixIcon: Icon(icon, color: GlobalColors.homeActionBackground),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: GlobalColors.homeStatusBackground,
-          width: 2,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: GlobalColors.homeHeaderLabel,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
-    ),
+      TextFormField(
+        controller: controller,
+        textCapitalization: capitalization,
+        keyboardType: keyboardType,
+        validator: validator,
+        style: const TextStyle(color: GlobalColors.primaryText),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: GlobalColors.homeActionBackground),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(
+              color: GlobalColors.homeStatusBackground,
+              width: 2,
+            ),
+          ),
+        ),
+      ),
+    ],
   );
 }
 

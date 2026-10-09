@@ -176,7 +176,6 @@ class _OrderListHeader extends StatelessWidget {
       children: [
         Expanded(flex: _orderIdColumnFlex, child: _ColumnLabel('BILL ID')),
         Expanded(flex: _orderTypeColumnFlex, child: _ColumnLabel('ORDER TYPE')),
-        Expanded(flex: _orderStatusColumnFlex, child: _ColumnLabel('STATUS')),
         SizedBox(width: _orderActionColumnWidth),
       ],
     ),
@@ -260,17 +259,6 @@ class _OrderListRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            flex: _orderStatusColumnFlex,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: _OrderStatusChip(isCompleted: order.isCompleted),
-              ),
-            ),
-          ),
           const SizedBox(
             width: _orderActionColumnWidth,
             child: Center(
@@ -285,52 +273,6 @@ class _OrderListRow extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _OrderStatusChip extends StatelessWidget {
-  const _OrderStatusChip({required this.isCompleted});
-
-  final bool isCompleted;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-    decoration: BoxDecoration(
-      color: isCompleted ? const Color(0xFFE0F2E7) : const Color(0xFFFFEBC5),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Text(
-      isCompleted ? 'Completed' : 'In progress',
-      style: TextStyle(
-        color: isCompleted ? const Color(0xFF16733A) : const Color(0xFF975400),
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  );
-}
-
-Future<void> _confirmDeleteOrder(BuildContext context, String billId) async {
-  final shouldDelete = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Delete order?'),
-      content: Text('Delete $billId?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Delete'),
-        ),
-      ],
-    ),
-  );
-  if (shouldDelete == true && context.mounted) {
-    context.read<RunningOrdersStore>().deleteOrder(billId);
-  }
 }
 
 class _OrderTypeChip extends StatelessWidget {
@@ -436,10 +378,7 @@ void _showConfirmedOrder(
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _OrderTypeChip(type: order.type),
-                      _OrderStatusChip(isCompleted: isCompleted),
-                    ],
+                    children: [_OrderTypeChip(type: order.type)],
                   ),
                 ],
               ),
@@ -531,6 +470,16 @@ void _showConfirmedOrder(
                                     fontSize: 12,
                                   ),
                                 ),
+                                if (order.items[index].note.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Note: ${order.items[index].note}',
+                                    style: const TextStyle(
+                                      color: GlobalColors.secondaryText,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -595,8 +544,8 @@ void _showConfirmedOrder(
                           order.billId,
                         );
                       },
-                      icon: const Icon(Icons.check),
-                      label: const Text('Complete'),
+                      icon: const Icon(Icons.point_of_sale_rounded),
+                      label: const Text('Checkout'),
                     ),
                   ),
                 if (!isCompleted) const SizedBox(width: 12),
@@ -607,10 +556,14 @@ void _showConfirmedOrder(
                     ),
                     onPressed: () {
                       Navigator.of(sheetContext).pop();
-                      _confirmDeleteOrder(context, order.billId);
+                      Navigator.of(context).push(
+                        MaterialPageRoute<bool>(
+                          builder: (_) => DineInPage(orderToUpdate: order),
+                        ),
+                      );
                     },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Delete'),
+                    icon: const Icon(Icons.add_shopping_cart_rounded),
+                    label: const Text('Add Items'),
                   ),
                 ),
               ],

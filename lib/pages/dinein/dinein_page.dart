@@ -7,12 +7,13 @@ import '../../session/running_orders_store.dart';
 import '../../utils/global_colors.dart';
 import '../../widgets/buttons/back_button.dart';
 
-/// Menu browser used when a dine-in order is being created.
+/// Menu browser used when creating an order or adding items to an existing one.
 
 part 'dinein_header.dart';
 part 'dinein_searchbar.dart';
 part 'dinein_menu.dart';
 part 'dinein_add_to_cart.dart';
+part 'dinein_add_note.dart';
 
 class DineInPage extends StatefulWidget {
   const DineInPage({
@@ -21,12 +22,14 @@ class DineInPage extends StatefulWidget {
     this.customerName,
     this.waiterName,
     this.pax,
+    this.orderToUpdate,
   });
 
   final String? tableNumber;
   final String? customerName;
   final String? waiterName;
   final int? pax;
+  final ConfirmedOrder? orderToUpdate;
 
   @override
   State<DineInPage> createState() => _DineInPageState();
@@ -112,41 +115,75 @@ class _DineInPageState extends State<DineInPage> {
   void _addToCart(DineInMenuItem item) {
     setState(() {
       final line = _cart[item.id];
-      _cart[item.id] = _CartLine(item, (line?.quantity ?? 0) + 1);
+      _cart[item.id] = _CartLine(
+        item,
+        (line?.quantity ?? 0) + 1,
+        note: line?.note ?? '',
+      );
     });
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('${item.name} added to cart')));
   }
 
+  Future<void> _editItemNote(_CartLine line) async {
+    final note = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          _ItemNoteDialog(itemName: line.item.name, initialNote: line.note),
+    );
+    if (note == null || !mounted) return;
+
+    setState(() {
+      final currentLine = _cart[line.item.id];
+      if (currentLine != null) {
+        _cart[line.item.id] = _CartLine(
+          currentLine.item,
+          currentLine.quantity,
+          note: note,
+        );
+      }
+    });
+  }
+
   void _confirmOrder() {
     if (_cart.isEmpty) return;
 
     final items = _cart.values
-        .map((line) => ConfirmedOrderItem(
-              id: line.item.id,
-              name: line.item.name,
-              quantity: line.quantity,
-              unitPrice: line.item.price,
-            ))
+        .map(
+          (line) => ConfirmedOrderItem(
+            id: line.item.id,
+            name: line.item.name,
+            quantity: line.quantity,
+            unitPrice: line.item.price,
+            note: line.note,
+          ),
+        )
         .toList();
-    context.read<RunningOrdersStore>().addOrder(
-          items: items,
-          tableNumber: widget.tableNumber,
-          customerName: widget.customerName,
-          waiterName: widget.waiterName,
-          pax: widget.pax,
-        );
+    final store = context.read<RunningOrdersStore>();
+    if (widget.orderToUpdate case final order?) {
+      store.addItems(order.billId, items);
+    } else {
+      store.addOrder(
+        items: items,
+        tableNumber: widget.tableNumber,
+        customerName: widget.customerName,
+        waiterName: widget.waiterName,
+        pax: widget.pax,
+      );
+    }
     setState(() => _isConfirmingOrder = true);
     Navigator.of(context).pop(true);
   }
 
   void _showCart() => _showDineInCart(
-        context,
-        _cart,
-        setState,
-        _confirmOrder,
-      );
+    context,
+    _cart,
+    setState,
+    _confirmOrder,
+    widget.orderToUpdate == null ? 'Confirm order' : 'Add items to order',
+    _editItemNote,
+  );
 
   Future<void> _showPendingOrderMessage() async {
     if (!mounted) return;
@@ -202,14 +239,35 @@ class _DineInPageState extends State<DineInPage> {
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Text(
-                    'Confirm the order or remove all cart items before leaving.',
-                    style: TextStyle(color: Colors.white, height: 1.5),
+                  child: Text(
+                    widget.orderToUpdate == null
+                        ? 'Confirm the order to save it.'
+                        : 'Confirm to add these items to ${widget.orderToUpdate!.billId}.',
+                    style: const TextStyle(color: Colors.white, height: 1.5),
                   ),
                 ),
                 const SizedBox(height: 22),
                 Row(
                   children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          _confirmOrder();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: GlobalColors.buttonBackground,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(
+                          widget.orderToUpdate == null
+                              ? 'Confirm order'
+                              : 'Add items',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(dialogContext).pop(),
@@ -218,22 +276,7 @@ class _DineInPageState extends State<DineInPage> {
                           side: const BorderSide(color: Color(0xFFAFBFC4)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: const Text('Continue'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop();
-                          _showCart();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: GlobalColors.buttonBackground,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text('View cart'),
+                        child: const Text('Back'),
                       ),
                     ),
                   ],
@@ -277,6 +320,10 @@ class _DineInPageState extends State<DineInPage> {
               cart: _cart,
               updatePage: setState,
               onConfirm: _confirmOrder,
+              onEditNote: _editItemNote,
+              confirmLabel: widget.orderToUpdate == null
+                  ? 'Confirm order'
+                  : 'Add items to order',
             ),
           ),
           sideContent: FutureBuilder<_DineInData>(

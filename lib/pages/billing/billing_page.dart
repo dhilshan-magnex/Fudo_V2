@@ -19,7 +19,6 @@ part 'billing_buttons.dart';
 
 const _orderIdColumnFlex = 9;
 const _orderTypeColumnFlex = 10;
-const _orderStatusColumnFlex = 11;
 const _orderActionColumnWidth = 24.0;
 
 class BillingPage extends StatefulWidget {
