@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class ShopInfoApi {
-  ShopInfoApi({http.Client? client}) : _client = client ?? http.Client();
+  ShopInfoApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String shopInfoEndpoint = 'shopinfo';
 
@@ -39,7 +40,7 @@ class ShopInfoApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Shop Info API failed with status ${response.statusCode}: $apiUrl',
+        'Shop Info API failed with status ${response.statusCode}.',
       );
     }
 

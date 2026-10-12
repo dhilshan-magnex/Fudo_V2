@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class MenuItemApi {
-  MenuItemApi({http.Client? client}) : _client = client ?? http.Client();
+  MenuItemApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String menuItemEndpoint = 'menuitem';
 
@@ -39,7 +40,7 @@ class MenuItemApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Menu Item API failed with status ${response.statusCode}: $apiUrl',
+        'Menu Item API failed with status ${response.statusCode}.',
       );
     }
 

@@ -12,23 +12,181 @@ class _TableDetailsDialog extends StatefulWidget {
 
 class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   late final TextEditingController _customerController;
+  final _customerFocusNode = FocusNode();
   late final TextEditingController _waiterController;
   final _paxController = TextEditingController(text: '1');
   final _formKey = GlobalKey<FormState>();
+  CustomerContact? _contact;
+  CustomerContact? _selectedSavedContact;
+  late final Future<List<CustomerContact>> _savedContactsFuture;
+  bool _isLookingUpContact = false;
+  int _contactLookupVersion = 0;
 
   @override
   void initState() {
     super.initState();
+    _savedContactsFuture = CustomerContact.loadAll();
     _customerController = TextEditingController();
+    _customerController.addListener(_lookupContact);
     _waiterController = TextEditingController(text: widget.waiterName);
   }
 
   @override
   void dispose() {
+    _customerController.removeListener(_lookupContact);
     _customerController.dispose();
+    _customerFocusNode.dispose();
     _waiterController.dispose();
     _paxController.dispose();
     super.dispose();
+  }
+
+  Future<void> _lookupContact() async {
+    final name = _customerController.text.trim();
+    final version = ++_contactLookupVersion;
+    if (name.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _contact = null;
+          _selectedSavedContact = null;
+          _isLookingUpContact = false;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      if (_selectedSavedContact?.name.toLowerCase() != name.toLowerCase()) {
+        _selectedSavedContact = null;
+      }
+      _isLookingUpContact = true;
+    });
+    final contact = await CustomerContact.findByName(name);
+    if (!mounted || version != _contactLookupVersion) return;
+    setState(() {
+      _contact = contact;
+      _isLookingUpContact = false;
+    });
+  }
+
+  Widget _buildCustomerNameField() => FutureBuilder<List<CustomerContact>>(
+    future: _savedContactsFuture,
+    builder: (context, snapshot) => LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RawAutocomplete<CustomerContact>(
+            textEditingController: _customerController,
+            focusNode: _customerFocusNode,
+            displayStringForOption: (contact) => contact.name,
+            optionsBuilder: (value) {
+              final query = value.text.trim().toLowerCase();
+              final contacts = snapshot.data;
+              if (query.isEmpty ||
+                  contacts == null ||
+                  _selectedSavedContact?.name.toLowerCase() == query) {
+                return const <CustomerContact>[];
+              }
+              return contacts
+                  .where(
+                    (contact) => contact.name.toLowerCase().contains(query),
+                  )
+                  .take(8);
+            },
+            onSelected: (contact) {
+              setState(() => _selectedSavedContact = contact);
+            },
+            fieldViewBuilder:
+                (context, controller, focusNode, onFieldSubmitted) =>
+                    _DialogField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      label: 'Customer name',
+                      icon: Icons.person_outline,
+                      capitalization: TextCapitalization.words,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Enter a customer name'
+                          : null,
+                    ),
+            optionsViewBuilder: (context, onSelected, options) {
+              final matches = options.toList();
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 8,
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 240),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        itemCount: matches.length,
+                        separatorBuilder: (_, _) =>
+                            const Divider(height: 1, indent: 16, endIndent: 16),
+                        itemBuilder: (context, index) {
+                          final contact = matches[index];
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(
+                              Icons.person_outline,
+                              color: GlobalColors.homeActionBackground,
+                            ),
+                            title: Text(contact.name),
+                            subtitle: contact.phone.isEmpty
+                                ? null
+                                : Text(contact.phone),
+                            onTap: () => onSelected(contact),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (snapshot.hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Could not load saved contacts.',
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  Future<void> _confirm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final customerName = _customerController.text.trim();
+    // Run a final lookup so a fast confirm cannot bypass the async lookup.
+    var contact = await CustomerContact.findByName(customerName);
+    if (!mounted) return;
+    if (contact == null) {
+      contact = await showDialog<CustomerContact>(
+        context: context,
+        builder: (_) => ContactForm(initialName: customerName),
+      );
+      if (contact == null || !mounted) return;
+      _customerController.text = contact.name;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop(
+      _TableOrderDetails(
+        customerName: contact.name,
+        waiterName: _waiterController.text.trim(),
+        pax: int.parse(_paxController.text.trim()),
+      ),
+    );
   }
 
   @override
@@ -114,15 +272,14 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                     ],
                   ),
                   const SizedBox(height: 22),
-                  _DialogField(
-                    controller: _customerController,
-                    label: 'Customer name',
-                    icon: Icons.person_outline,
-                    capitalization: TextCapitalization.words,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Enter a customer name'
-                        : null,
-                  ),
+                  _buildCustomerNameField(),
+                  if (_customerController.text.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ContactLookupStatus(
+                      contact: _contact,
+                      isLoading: _isLookingUpContact,
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   _DialogField(
                     controller: _waiterController,
@@ -162,17 +319,7 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                         child: _DialogAction(
                           label: 'Confirm',
                           icon: Icons.check_rounded,
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              Navigator.of(context).pop(
-                                _TableOrderDetails(
-                                  customerName: _customerController.text.trim(),
-                                  waiterName: _waiterController.text.trim(),
-                                  pax: int.parse(_paxController.text.trim()),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: _confirm,
                         ),
                       ),
                     ],
@@ -192,17 +339,24 @@ class _DialogField extends StatelessWidget {
     required this.controller,
     required this.label,
     required this.icon,
+    this.focusNode,
     this.capitalization = TextCapitalization.none,
     this.keyboardType,
     this.validator,
-  });
+  }) : maxLines = 1,
+       readOnly = false,
+       onTap = null;
 
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final FocusNode? focusNode;
   final TextCapitalization capitalization;
   final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
+  final int maxLines;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -221,8 +375,12 @@ class _DialogField extends StatelessWidget {
       ),
       TextFormField(
         controller: controller,
+        focusNode: focusNode,
         textCapitalization: capitalization,
         keyboardType: keyboardType,
+        maxLines: maxLines,
+        readOnly: readOnly,
+        onTap: onTap,
         validator: validator,
         style: const TextStyle(color: GlobalColors.primaryText),
         decoration: InputDecoration(
@@ -260,7 +418,7 @@ class _DialogAction extends StatelessWidget {
 
   final String label;
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool outlined;
 
   @override

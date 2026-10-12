@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class CatLvlApi {
-  CatLvlApi({http.Client? client}) : _client = client ?? http.Client();
+  CatLvlApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String catLvl1Endpoint = 'catlv1lang';
   static const String catLvl2Endpoint = 'catlv2lang';
@@ -46,7 +47,7 @@ class CatLvlApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Category level API failed with status ${response.statusCode}: $apiUrl',
+        'Category level API failed with status ${response.statusCode}.',
       );
     }
 

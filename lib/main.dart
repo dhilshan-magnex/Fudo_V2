@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'session/session_provider.dart';
 import 'session/running_orders_store.dart';
 import 'pages/login_page.dart';
+import 'api/api_http_client.dart';
 
 void main() {
   // Use sqflite_common_ffi only for desktop platforms
@@ -24,8 +25,33 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ApiHttpClient.close();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      ApiHttpClient.close();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

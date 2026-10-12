@@ -15,11 +15,10 @@ class AuthService {
 
     bool passwordValid;
 
-    if (_isBcryptHash(storedPassword)) {
-      passwordValid = BCrypt.checkpw(password, storedPassword);
-    } else {
-      passwordValid = password == storedPassword;
-    }
+    // Plaintext credential records are intentionally not accepted. Migrate
+    // legacy users to bcrypt hashes before enabling their accounts.
+    if (!_isBcryptHash(storedPassword)) return null;
+    passwordValid = BCrypt.checkpw(password, storedPassword);
 
     if (!passwordValid) {
       return null;

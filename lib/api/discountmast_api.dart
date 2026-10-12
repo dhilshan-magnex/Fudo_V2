@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class DiscountMastApi {
-  DiscountMastApi({http.Client? client}) : _client = client ?? http.Client();
+  DiscountMastApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String discountMastEndpoint = 'discountmast';
 
@@ -39,7 +40,7 @@ class DiscountMastApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Discount Mast API failed with status ${response.statusCode}: $apiUrl',
+        'Discount Mast API failed with status ${response.statusCode}.',
       );
     }
 

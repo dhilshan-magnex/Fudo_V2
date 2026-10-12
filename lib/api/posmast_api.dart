@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class PosMastApi {
-  PosMastApi({http.Client? client}) : _client = client ?? http.Client();
+  PosMastApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String posMastEndpoint = 'posmast';
 
@@ -39,7 +40,7 @@ class PosMastApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'POS Mast API failed with status ${response.statusCode}: $apiUrl',
+        'POS Mast API failed with status ${response.statusCode}.',
       );
     }
 

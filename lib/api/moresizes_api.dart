@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class MoreSizesApi {
-  MoreSizesApi({http.Client? client}) : _client = client ?? http.Client();
+  MoreSizesApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String moreSizesEndpoint = 'moresizes';
 
@@ -39,7 +40,7 @@ class MoreSizesApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'More Sizes API failed with status ${response.statusCode}: $apiUrl',
+        'More Sizes API failed with status ${response.statusCode}.',
       );
     }
 

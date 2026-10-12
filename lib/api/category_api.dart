@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class CategoryApi {
   CategoryApi({http.Client? client})
-      : _client = client ?? http.Client();
+      : _client = client ?? ApiHttpClient.instance;
 
   static const String categoryLvl1Endpoint = 'categorylvl1';
   static const String categoryLvl2Endpoint = 'categorylvl2';
@@ -130,7 +131,7 @@ class CategoryApi {
       throw Exception(
         'Category API failed.\n'
         'Status: ${response.statusCode}\n'
-        'URL: $apiUrl',
+        'The server returned an unsuccessful response.',
       );
     }
 

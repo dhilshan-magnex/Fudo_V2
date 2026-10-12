@@ -131,7 +131,7 @@ class DBManager {
     config.assetPath,
   );
 
-  debugPrint('Opening database: $databasePath');
+  // debugPrint('Opening database: $databasePath');
 
   return openDatabase(databasePath);
 }
@@ -150,7 +150,9 @@ class DBManager {
     );
 
     if (!hasRequiredColumns) {
-      await deleteDatabase(databasePath);
+      throw StateError(
+        'Local database schema is incompatible. A data migration is required.',
+      );
     }
   }
 

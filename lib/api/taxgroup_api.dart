@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class TaxGroupApi {
-  TaxGroupApi({http.Client? client}) : _client = client ?? http.Client();
+  TaxGroupApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String taxGroupEndpoint = 'taxgroup';
 
@@ -39,7 +40,7 @@ class TaxGroupApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Tax Group API failed with status ${response.statusCode}: $apiUrl',
+        'Tax Group API failed with status ${response.statusCode}.',
       );
     }
 

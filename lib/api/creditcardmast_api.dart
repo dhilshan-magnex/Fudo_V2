@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class CreditCardMastApi {
-  CreditCardMastApi({http.Client? client}) : _client = client ?? http.Client();
+  CreditCardMastApi({http.Client? client}) : _client = client ?? ApiHttpClient.instance;
 
   static const String creditCardMastEndpoint = 'creditcardmast';
 
@@ -40,7 +41,7 @@ class CreditCardMastApi {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        'Credit Card Mast API failed with status ${response.statusCode}: $apiUrl',
+        'Credit Card Mast API failed with status ${response.statusCode}.',
       );
     }
 

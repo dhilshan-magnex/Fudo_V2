@@ -5,6 +5,7 @@ import '../../layout/layout.dart';
 import '../../session/session_provider.dart';
 import '../../utils/global_colors.dart';
 import '../../widgets/buttons/back_button.dart';
+import '../../widgets/contact_form.dart';
 import '../dinein/dinein_page.dart';
 
 part 'table_header.dart';

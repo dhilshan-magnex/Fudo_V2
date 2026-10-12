@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../session/api_config.dart';
 import '../database/db_manager.dart';
 
 class AppLicenseApi {
   AppLicenseApi({http.Client? client})
-      : _client = client ?? http.Client();
+      : _client = client ?? ApiHttpClient.instance;
 
   static const String appLicenseEndpoint = 'applicense';
  
@@ -30,7 +31,7 @@ class AppLicenseApi {
 
     if (rows.isEmpty) {
       throw Exception(
-        'App License API returned no license rows: $resolvedApiUrl',
+        'App License API returned no license rows.',
       );
     }
 
@@ -71,7 +72,7 @@ class AppLicenseApi {
         response.statusCode >= 300) {
       throw Exception(
         'App License API failed with status '
-        '${response.statusCode}: $apiUrl',
+        '${response.statusCode}',
       );
     }
 
