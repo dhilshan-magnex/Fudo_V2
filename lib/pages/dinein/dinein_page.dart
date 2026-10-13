@@ -6,6 +6,7 @@ import '../../layout/layout.dart';
 import '../../session/running_orders_store.dart';
 import '../../utils/global_colors.dart';
 import '../../widgets/buttons/back_button.dart';
+import '../../widgets/contact_form.dart';
 
 /// Menu browser used when creating an order or adding items to an existing one.
 
@@ -146,8 +147,19 @@ class _DineInPageState extends State<DineInPage> {
     });
   }
 
-  void _confirmOrder() {
+  Future<void> _confirmOrder() async {
     if (_cart.isEmpty) return;
+
+    CustomerContact? customer;
+    if (widget.orderToUpdate == null) {
+      customer = await showDialog<CustomerContact>(
+        context: context,
+        builder: (_) => _DineInCustomerDialog(
+          initialName: widget.customerName ?? '',
+        ),
+      );
+      if (customer == null || !mounted) return;
+    }
 
     final items = _cart.values
         .map(
@@ -167,7 +179,7 @@ class _DineInPageState extends State<DineInPage> {
       store.addOrder(
         items: items,
         tableNumber: widget.tableNumber,
-        customerName: widget.customerName,
+        customerName: customer?.name ?? widget.customerName,
         waiterName: widget.waiterName,
         pax: widget.pax,
       );
@@ -251,9 +263,9 @@ class _DineInPageState extends State<DineInPage> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.of(dialogContext).pop();
-                          _confirmOrder();
+                          await _confirmOrder();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: GlobalColors.buttonBackground,

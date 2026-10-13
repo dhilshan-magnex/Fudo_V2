@@ -12,6 +12,7 @@ class _TableDetailsDialog extends StatefulWidget {
 
 class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   late final TextEditingController _customerController;
+  final _contactNoController = TextEditingController();
   final _customerFocusNode = FocusNode();
   late final TextEditingController _waiterController;
   final _paxController = TextEditingController(text: '1');
@@ -35,6 +36,7 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   void dispose() {
     _customerController.removeListener(_lookupContact);
     _customerController.dispose();
+    _contactNoController.dispose();
     _customerFocusNode.dispose();
     _waiterController.dispose();
     _paxController.dispose();
@@ -66,6 +68,9 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
     setState(() {
       _contact = contact;
       _isLookingUpContact = false;
+      if (contact != null) {
+        _contactNoController.text = contact.phone;
+      }
     });
   }
 
@@ -94,7 +99,10 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                   .take(8);
             },
             onSelected: (contact) {
-              setState(() => _selectedSavedContact = contact);
+              setState(() {
+                _selectedSavedContact = contact;
+                _contactNoController.text = contact.phone;
+              });
             },
             fieldViewBuilder:
                 (context, controller, focusNode, onFieldSubmitted) =>
@@ -170,13 +178,20 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
     // Run a final lookup so a fast confirm cannot bypass the async lookup.
     var contact = await CustomerContact.findByName(customerName);
     if (!mounted) return;
+    if (contact != null) {
+      _contactNoController.text = contact.phone;
+    }
     if (contact == null) {
       contact = await showDialog<CustomerContact>(
         context: context,
-        builder: (_) => ContactForm(initialName: customerName),
+        builder: (_) => ContactForm(
+          initialName: customerName,
+          initialPhone: _contactNoController.text.trim(),
+        ),
       );
       if (contact == null || !mounted) return;
       _customerController.text = contact.name;
+      _contactNoController.text = contact.phone;
     }
 
     if (!mounted) return;
@@ -273,6 +288,13 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                   ),
                   const SizedBox(height: 22),
                   _buildCustomerNameField(),
+                  const SizedBox(height: 14),
+                  _DialogField(
+                    controller: _contactNoController,
+                    label: 'Contact number',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
                   if (_customerController.text.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     ContactLookupStatus(
