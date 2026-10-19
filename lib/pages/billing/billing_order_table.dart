@@ -385,6 +385,10 @@ void _showConfirmedOrder(
             ),
             if (order.tableNumber != null ||
                 order.customerName != null ||
+                order.customerPhone != null ||
+                order.deliveryAddress != null ||
+                order.deliveryArea != null ||
+                order.orderNote != null ||
                 order.waiterName != null ||
                 order.pax != null) ...[
               const SizedBox(height: 14),
@@ -403,6 +407,14 @@ void _showConfirmedOrder(
                       _OrderSheetInfo('TABLE', order.tableNumber!),
                     if (order.customerName != null)
                       _OrderSheetInfo('CUSTOMER', order.customerName!),
+                    if (order.customerPhone != null)
+                      _OrderSheetInfo('PHONE', order.customerPhone!),
+                    if (order.deliveryAddress != null)
+                      _OrderSheetInfo('ADDRESS', order.deliveryAddress!),
+                    if (order.deliveryArea != null)
+                      _OrderSheetInfo('AREA', order.deliveryArea!),
+                    if (order.orderNote != null)
+                      _OrderSheetInfo('ORDER NOTE', order.orderNote!),
                     if (order.waiterName != null)
                       _OrderSheetInfo('WAITER', order.waiterName!),
                     if (order.pax != null)
@@ -444,7 +456,10 @@ void _showConfirmedOrder(
                         height: 1,
                         color: GlobalColors.billingRowDivider,
                       ),
-                    Padding(
+                    Container(
+                      color: order.items[index].isNewlyAdded
+                          ? const Color(0xFFFFF3D6)
+                          : Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -462,6 +477,19 @@ void _showConfirmedOrder(
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+
+                                if (order.items[index].isNewlyAdded) ...[
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'NEW',
+                                    style: TextStyle(
+                                      color: Color(0xFF975400),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 4),
                                 Text(
                                   '${order.items[index].quantity} × ${priceFormat.format(order.items[index].unitPrice)}',

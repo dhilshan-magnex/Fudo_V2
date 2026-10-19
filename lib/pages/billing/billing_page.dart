@@ -11,6 +11,7 @@ import '../../widgets/authorization.dart';
 import '../../widgets/buttons/back_button.dart';
 import '../../widgets/buttons/button.dart';
 import '../dinein/dinein_page.dart';
+import '../delivery/delivery_page.dart';
 import '../table/table_page.dart';
 
 part 'billing_header.dart';

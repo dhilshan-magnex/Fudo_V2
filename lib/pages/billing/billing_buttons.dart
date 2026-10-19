@@ -53,6 +53,10 @@ class _OrderTypeActions extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<bool>(builder: (_) => const DineInPage()),
                 );
+              } else if (action.label == 'Delivery') {
+                Navigator.of(context).push(
+                  MaterialPageRoute<bool>(builder: (_) => const DeliveryPage()),
+                );
               }
             },
           );

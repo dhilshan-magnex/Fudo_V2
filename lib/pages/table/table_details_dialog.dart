@@ -26,15 +26,15 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   @override
   void initState() {
     super.initState();
-    _savedContactsFuture = CustomerContact.loadAll();
+    _savedContactsFuture = CustomerContact.loadAllByPhone();
     _customerController = TextEditingController();
-    _customerController.addListener(_lookupContact);
+    _contactNoController.addListener(_lookupContact);
     _waiterController = TextEditingController(text: widget.waiterName);
   }
 
   @override
   void dispose() {
-    _customerController.removeListener(_lookupContact);
+    _contactNoController.removeListener(_lookupContact);
     _customerController.dispose();
     _contactNoController.dispose();
     _customerFocusNode.dispose();
@@ -44,9 +44,9 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   }
 
   Future<void> _lookupContact() async {
-    final name = _customerController.text.trim();
+    final phone = _contactNoController.text.trim();
     final version = ++_contactLookupVersion;
-    if (name.isEmpty) {
+    if (phone.isEmpty) {
       if (mounted) {
         setState(() {
           _contact = null;
@@ -58,49 +58,52 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
     }
 
     setState(() {
-      if (_selectedSavedContact?.name.toLowerCase() != name.toLowerCase()) {
+      if (_selectedSavedContact?.phone != phone) {
         _selectedSavedContact = null;
       }
       _isLookingUpContact = true;
     });
-    final contact = await CustomerContact.findByName(name);
+    final contact = await CustomerContact.findByPhone(phone);
     if (!mounted || version != _contactLookupVersion) return;
     setState(() {
       _contact = contact;
       _isLookingUpContact = false;
       if (contact != null) {
-        _contactNoController.text = contact.phone;
+        _customerController.text = contact.name;
       }
     });
   }
 
-  Widget _buildCustomerNameField() => FutureBuilder<List<CustomerContact>>(
+  Widget _buildCustomerNumberField() => FutureBuilder<List<CustomerContact>>(
     future: _savedContactsFuture,
     builder: (context, snapshot) => LayoutBuilder(
       builder: (context, constraints) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RawAutocomplete<CustomerContact>(
-            textEditingController: _customerController,
+            textEditingController: _contactNoController,
             focusNode: _customerFocusNode,
-            displayStringForOption: (contact) => contact.name,
+            displayStringForOption: (contact) => contact.phone,
             optionsBuilder: (value) {
               final query = value.text.trim().toLowerCase();
               final contacts = snapshot.data;
               if (query.isEmpty ||
                   contacts == null ||
-                  _selectedSavedContact?.name.toLowerCase() == query) {
+                  _selectedSavedContact?.phone == query) {
                 return const <CustomerContact>[];
               }
               return contacts
                   .where(
-                    (contact) => contact.name.toLowerCase().contains(query),
+                    (contact) => contact.phone.contains(query),
                   )
                   .take(8);
             },
             onSelected: (contact) {
               setState(() {
                 _selectedSavedContact = contact;
+                _contact = contact;
+                _isLookingUpContact = false;
+                _customerController.text = contact.name;
                 _contactNoController.text = contact.phone;
               });
             },
@@ -109,12 +112,12 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                     _DialogField(
                       controller: controller,
                       focusNode: focusNode,
-                      label: 'Customer name',
-                      icon: Icons.person_outline,
-                      capitalization: TextCapitalization.words,
+                      label: 'Contact number',
+                      icon: Icons.phone_outlined,
+                      keyboardType: TextInputType.phone,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                          ? 'Enter a customer name'
+                          ? 'Enter a contact number'
                           : null,
                     ),
             optionsViewBuilder: (context, onSelected, options) {
@@ -144,10 +147,10 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                               Icons.person_outline,
                               color: GlobalColors.homeActionBackground,
                             ),
-                            title: Text(contact.name),
-                            subtitle: contact.phone.isEmpty
+                            title: Text(contact.phone),
+                            subtitle: contact.name.isEmpty
                                 ? null
-                                : Text(contact.phone),
+                                : Text(contact.name),
                             onTap: () => onSelected(contact),
                           );
                         },
@@ -174,18 +177,19 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
   Future<void> _confirm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final customerName = _customerController.text.trim();
     // Run a final lookup so a fast confirm cannot bypass the async lookup.
-    var contact = await CustomerContact.findByName(customerName);
+    var contact = await CustomerContact.findByPhone(
+      _contactNoController.text.trim(),
+    );
     if (!mounted) return;
     if (contact != null) {
-      _contactNoController.text = contact.phone;
+      _customerController.text = contact.name;
     }
     if (contact == null) {
       contact = await showDialog<CustomerContact>(
         context: context,
         builder: (_) => ContactForm(
-          initialName: customerName,
+          initialName: _customerController.text.trim(),
           initialPhone: _contactNoController.text.trim(),
         ),
       );
@@ -287,21 +291,24 @@ class _TableDetailsDialogState extends State<_TableDetailsDialog> {
                     ],
                   ),
                   const SizedBox(height: 22),
-                  _buildCustomerNameField(),
-                  const SizedBox(height: 14),
-                  _DialogField(
-                    controller: _contactNoController,
-                    label: 'Contact number',
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                  ),
-                  if (_customerController.text.trim().isNotEmpty) ...[
+                  _buildCustomerNumberField(),
+                  if (_contactNoController.text.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     ContactLookupStatus(
                       contact: _contact,
                       isLoading: _isLookingUpContact,
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  _DialogField(
+                    controller: _customerController,
+                    label: 'Customer name',
+                    icon: Icons.person_outline,
+                    capitalization: TextCapitalization.words,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Enter a customer name'
+                        : null,
+                  ),
                   const SizedBox(height: 14),
                   _DialogField(
                     controller: _waiterController,

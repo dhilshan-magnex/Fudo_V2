@@ -6,6 +6,7 @@ import '../../layout/layout.dart';
 import '../../session/running_orders_store.dart';
 import '../../utils/global_colors.dart';
 import '../../widgets/buttons/back_button.dart';
+import '../../widgets/buttons/discard_button.dart';
 import '../../widgets/contact_form.dart';
 
 /// Menu browser used when creating an order or adding items to an existing one.
@@ -21,6 +22,12 @@ class DineInPage extends StatefulWidget {
     super.key,
     this.tableNumber,
     this.customerName,
+    this.customer,
+    this.orderType,
+    this.customerPhone,
+    this.deliveryAddress,
+    this.deliveryArea,
+    this.orderNote,
     this.waiterName,
     this.pax,
     this.orderToUpdate,
@@ -28,6 +35,12 @@ class DineInPage extends StatefulWidget {
 
   final String? tableNumber;
   final String? customerName;
+  final CustomerContact? customer;
+  final String? orderType;
+  final String? customerPhone;
+  final String? deliveryAddress;
+  final String? deliveryArea;
+  final String? orderNote;
   final String? waiterName;
   final int? pax;
   final ConfirmedOrder? orderToUpdate;
@@ -44,18 +57,59 @@ class _DineInPageState extends State<DineInPage> {
   String? _categoryCode;
   String _query = '';
   final Map<String, _CartLine> _cart = {};
-  bool _isConfirmingOrder = false;
+  bool _isLeavingPage = false;
+  bool _isCollectingInitialCustomer = false;
+  CustomerContact? _customer;
 
-  int get _cartItemCount =>
-      _cart.values.fold(0, (total, line) => total + line.quantity);
+  int get _cartItemCount => _cart.values.fold(
+    0,
+    (total, line) =>
+        total +
+        (widget.orderToUpdate == null ? line.quantity : line.pendingQuantity),
+  );
+
+  bool get _hasPendingItems =>
+      _cart.values.any((line) => line.quantity > line.existingQuantity);
 
   @override
   void initState() {
     super.initState();
+    final order = widget.orderToUpdate;
+    if (order != null) {
+      for (final item in order.items) {
+        final current = _cart[item.id];
+        final quantity = (current?.quantity ?? 0) + item.quantity;
+        final existingQuantity =
+            (current?.existingQuantity ?? 0) + item.quantity;
+        _cart[item.id] = _CartLine(
+          DineInMenuItem(
+            id: item.id,
+            name: item.name,
+            longName: item.name,
+            categoryCode: '',
+            price: item.unitPrice,
+            colorCode: '',
+            order: 0,
+            isAvailableForDineIn: true,
+          ),
+          quantity,
+          note: item.note,
+          existingQuantity: existingQuantity,
+        );
+      }
+    }
+    _customer = widget.customer;
+    _isCollectingInitialCustomer =
+        order == null && widget.tableNumber == null && widget.customer == null;
     _menuFuture = _loadMenu();
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
     });
+    if (_isCollectingInitialCustomer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _collectInitialCustomer();
+      });
+    }
   }
 
   @override
@@ -113,18 +167,39 @@ class _DineInPageState extends State<DineInPage> {
 
   void _refresh() => setState(() => _menuFuture = _loadMenu());
 
+  Future<void> _collectInitialCustomer() async {
+    final customer = await showDialog<CustomerContact>(
+      context: context,
+      builder: (_) =>
+          _DineInCustomerDialog(initialName: widget.customerName ?? ''),
+    );
+    if (!mounted) return;
+    if (customer == null) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    setState(() {
+      _customer = customer;
+      _isCollectingInitialCustomer = false;
+    });
+  }
+
   void _addToCart(DineInMenuItem item) {
     setState(() {
       final line = _cart[item.id];
-      _cart[item.id] = _CartLine(
+      final updatedLine = _CartLine(
         item,
         (line?.quantity ?? 0) + 1,
         note: line?.note ?? '',
+        existingQuantity: line?.existingQuantity ?? 0,
       );
+      final remainingLines = Map<String, _CartLine>.from(_cart)
+        ..remove(item.id);
+      _cart
+        ..clear()
+        ..[item.id] = updatedLine
+        ..addAll(remainingLines);
     });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${item.name} added to cart')));
   }
 
   Future<void> _editItemNote(_CartLine line) async {
@@ -142,31 +217,34 @@ class _DineInPageState extends State<DineInPage> {
           currentLine.item,
           currentLine.quantity,
           note: note,
+          existingQuantity: currentLine.existingQuantity,
         );
       }
     });
   }
 
   Future<void> _confirmOrder() async {
-    if (_cart.isEmpty) return;
+    if (!_hasPendingItems) return;
 
-    CustomerContact? customer;
-    if (widget.orderToUpdate == null) {
+    var customer = _customer;
+    if (widget.orderToUpdate == null &&
+        widget.tableNumber == null &&
+        customer == null) {
       customer = await showDialog<CustomerContact>(
         context: context,
-        builder: (_) => _DineInCustomerDialog(
-          initialName: widget.customerName ?? '',
-        ),
+        builder: (_) =>
+            _DineInCustomerDialog(initialName: widget.customerName ?? ''),
       );
       if (customer == null || !mounted) return;
     }
 
     final items = _cart.values
+        .where((line) => line.quantity > line.existingQuantity)
         .map(
           (line) => ConfirmedOrderItem(
             id: line.item.id,
             name: line.item.name,
-            quantity: line.quantity,
+            quantity: line.quantity - line.existingQuantity,
             unitPrice: line.item.price,
             note: line.note,
           ),
@@ -180,11 +258,16 @@ class _DineInPageState extends State<DineInPage> {
         items: items,
         tableNumber: widget.tableNumber,
         customerName: customer?.name ?? widget.customerName,
+        customerPhone: widget.customerPhone ?? customer?.phone,
+        deliveryAddress: widget.deliveryAddress ?? customer?.address,
+        deliveryArea: widget.deliveryArea,
+        orderNote: widget.orderNote,
+        orderType: widget.orderType,
         waiterName: widget.waiterName,
         pax: widget.pax,
       );
     }
-    setState(() => _isConfirmingOrder = true);
+    setState(() => _isLeavingPage = true);
     Navigator.of(context).pop(true);
   }
 
@@ -195,12 +278,14 @@ class _DineInPageState extends State<DineInPage> {
     _confirmOrder,
     widget.orderToUpdate == null ? 'Confirm order' : 'Add items to order',
     _editItemNote,
+    () => _hasPendingItems,
+    widget.orderToUpdate != null,
   );
 
   Future<void> _showPendingOrderMessage() async {
     if (!mounted) return;
 
-    await showDialog<void>(
+    final discardPendingItems = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
@@ -281,14 +366,8 @@ class _DineInPageState extends State<DineInPage> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0xFFAFBFC4)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: const Text('Back'),
+                      child: DiscardButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
                       ),
                     ),
                   ],
@@ -299,10 +378,15 @@ class _DineInPageState extends State<DineInPage> {
         ),
       ),
     );
+
+    if (discardPendingItems == true && mounted) {
+      setState(() => _isLeavingPage = true);
+      Navigator.of(context).pop(false);
+    }
   }
 
   void _attemptLeave() {
-    if (_cart.isNotEmpty) {
+    if (_hasPendingItems) {
       _showPendingOrderMessage();
       return;
     }
@@ -313,10 +397,17 @@ class _DineInPageState extends State<DineInPage> {
   Widget build(BuildContext context) {
     final isTablet = AppLayoutType.fromContext(context).isTablet;
 
+    if (_isCollectingInitialCustomer) {
+      return Scaffold(
+        backgroundColor: GlobalColors.homeBackground,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return PopScope(
-      canPop: _cart.isEmpty || _isConfirmingOrder,
+      canPop: !_hasPendingItems || _isLeavingPage,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _cart.isNotEmpty) {
+        if (!didPop && _hasPendingItems) {
           _showPendingOrderMessage();
         }
       },
@@ -333,6 +424,8 @@ class _DineInPageState extends State<DineInPage> {
               updatePage: setState,
               onConfirm: _confirmOrder,
               onEditNote: _editItemNote,
+              canConfirm: _hasPendingItems,
+              showNewItemHighlight: widget.orderToUpdate != null,
               confirmLabel: widget.orderToUpdate == null
                   ? 'Confirm order'
                   : 'Add items to order',

@@ -7,6 +7,7 @@ class ConfirmedOrderItem {
     required this.quantity,
     required this.unitPrice,
     this.note = '',
+    this.isNewlyAdded = false,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class ConfirmedOrderItem {
   final int quantity;
   final double unitPrice;
   final String note;
+  final bool isNewlyAdded;
 
   double get subtotal => quantity * unitPrice;
 }
@@ -25,6 +27,10 @@ class ConfirmedOrder {
     required this.items,
     this.tableNumber,
     this.customerName,
+    this.customerPhone,
+    this.deliveryAddress,
+    this.deliveryArea,
+    this.orderNote,
     this.waiterName,
     this.pax,
   });
@@ -34,6 +40,10 @@ class ConfirmedOrder {
   final List<ConfirmedOrderItem> items;
   final String? tableNumber;
   final String? customerName;
+  final String? customerPhone;
+  final String? deliveryAddress;
+  final String? deliveryArea;
+  final String? orderNote;
   final String? waiterName;
   final int? pax;
 
@@ -80,9 +90,33 @@ class RunningOrdersStore extends ChangeNotifier {
     final updatedOrder = ConfirmedOrder(
       billId: order.billId,
       type: order.type,
-      items: List.unmodifiable([...order.items, ...items]),
+      items: List.unmodifiable([
+        ...order.items.map(
+          (item) => ConfirmedOrderItem(
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.note,
+          ),
+        ),
+        ...items.map(
+          (item) => ConfirmedOrderItem(
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.note,
+            isNewlyAdded: true,
+          ),
+        ),
+      ]),
       tableNumber: order.tableNumber,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      deliveryAddress: order.deliveryAddress,
+      deliveryArea: order.deliveryArea,
+      orderNote: order.orderNote,
       waiterName: order.waiterName,
       pax: order.pax,
     );
@@ -103,6 +137,11 @@ class RunningOrdersStore extends ChangeNotifier {
     required List<ConfirmedOrderItem> items,
     String? tableNumber,
     String? customerName,
+    String? customerPhone,
+    String? deliveryAddress,
+    String? deliveryArea,
+    String? orderNote,
+    String? orderType,
     String? waiterName,
     int? pax,
   }) {
@@ -111,10 +150,14 @@ class RunningOrdersStore extends ChangeNotifier {
     }
     final order = ConfirmedOrder(
       billId: 'B-${_nextBillNumber.toString().padLeft(4, '0')}',
-      type: tableNumber == null ? 'Dine In' : 'Table',
+      type: orderType ?? (tableNumber == null ? 'Dine In' : 'Table'),
       items: List.unmodifiable(items),
       tableNumber: tableNumber,
       customerName: customerName,
+      customerPhone: customerPhone,
+      deliveryAddress: deliveryAddress,
+      deliveryArea: deliveryArea,
+      orderNote: orderNote,
       waiterName: waiterName,
       pax: pax,
     );

@@ -12,6 +12,7 @@ class CustomerContact {
     required this.phone,
     required this.dateOfBirth,
     required this.anniversary,
+    this.area = '',
   });
 
   final String name;
@@ -19,6 +20,7 @@ class CustomerContact {
   final String phone;
   final String dateOfBirth;
   final String anniversary;
+  final String area;
 
   factory CustomerContact.fromRow(Map<String, dynamic> row) => CustomerContact(
     name: row['Customer_Name']?.toString().trim() ?? '',
@@ -26,6 +28,7 @@ class CustomerContact {
     phone: row['Customer_Phone']?.toString().trim() ?? '',
     dateOfBirth: row['Customer_DoB']?.toString().trim() ?? '',
     anniversary: row['Customer_Anniversary']?.toString().trim() ?? '',
+    area: row['Customer_Area']?.toString().trim() ?? '',
   );
 
   static Future<CustomerContact?> findByName(String name) async {
@@ -34,6 +37,17 @@ class CustomerContact {
       'Customer_Master',
       where: 'LOWER(TRIM(Customer_Name)) = LOWER(?)',
       whereArgs: [name.trim()],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : CustomerContact.fromRow(rows.first);
+  }
+
+  static Future<CustomerContact?> findByPhone(String phone) async {
+    final database = await DBManager.getDatabase(AppDatabase.fudo);
+    final rows = await database.query(
+      'Customer_Master',
+      where: 'TRIM(Customer_Phone) = ?',
+      whereArgs: [phone.trim()],
       limit: 1,
     );
     return rows.isEmpty ? null : CustomerContact.fromRow(rows.first);
@@ -56,8 +70,42 @@ class CustomerContact {
         .toList();
   }
 
+  static Future<List<CustomerContact>> loadAllByPhone() async {
+    final database = await DBManager.getDatabase(AppDatabase.fudo);
+    final rows = await database.query(
+      'Customer_Master',
+      orderBy: 'Customer_Phone COLLATE NOCASE',
+    );
+    final seenPhones = <String>{};
+    return rows
+        .map(CustomerContact.fromRow)
+        .where(
+          (contact) =>
+              contact.phone.isNotEmpty && seenPhones.add(contact.phone),
+        )
+        .toList();
+  }
+
+  static Future<List<String>> loadAreas() async {
+    final database = await DBManager.getDatabase(AppDatabase.fudo);
+    final rows = await database.query(
+      'Customer_Master',
+      columns: ['Customer_Area'],
+      distinct: true,
+      orderBy: 'Customer_Area COLLATE NOCASE',
+    );
+    return rows
+        .map((row) => row['Customer_Area']?.toString().trim() ?? '')
+        .where((area) => area.isNotEmpty)
+        .toList();
+  }
+
   Future<CustomerContact> save() async {
     final database = await DBManager.getDatabase(AppDatabase.fudo);
+    if (phone.isNotEmpty) {
+      final existingByPhone = await findByPhone(phone);
+      if (existingByPhone != null) return existingByPhone;
+    }
     final existing = await findByName(name);
     if (existing != null) return existing;
     await _ensureAdditionalInfoColumns(database);
@@ -65,6 +113,7 @@ class CustomerContact {
       'Customer_Code': 'LOCAL-${DateTime.now().microsecondsSinceEpoch}',
       'Customer_Name': name,
       'Customer_Address': address,
+      'Customer_Area': area,
       'Customer_Phone': phone,
       'Customer_Email': '',
       'Customer_Cr_Limit': 0,

@@ -9,6 +9,8 @@ void _showDineInCart(
   Future<void> Function() onConfirm,
   String confirmLabel,
   Future<void> Function(_CartLine) onEditNote,
+  bool Function() canConfirm,
+  bool showNewItemHighlight,
 ) {
   showModalBottomSheet<void>(
     context: context,
@@ -22,13 +24,23 @@ void _showDineInCart(
         void changeQuantity(_CartLine line, int change) {
           updatePage(() {
             final quantity = line.quantity + change;
-            if (quantity <= 0) {
-              cart.remove(line.item.id);
+            if (quantity <= line.existingQuantity) {
+              if (line.existingQuantity == 0) {
+                cart.remove(line.item.id);
+              } else {
+                cart[line.item.id] = _CartLine(
+                  line.item,
+                  line.existingQuantity,
+                  note: line.note,
+                  existingQuantity: line.existingQuantity,
+                );
+              }
             } else {
               cart[line.item.id] = _CartLine(
                 line.item,
                 quantity,
                 note: line.note,
+                existingQuantity: line.existingQuantity,
               );
             }
           });
@@ -38,6 +50,12 @@ void _showDineInCart(
         final subtotal = cart.values.fold<double>(
           0,
           (total, line) => total + line.item.price * line.quantity,
+        );
+        final itemCount = cart.values.fold<int>(
+          0,
+          (total, line) =>
+              total +
+              (showNewItemHighlight ? line.pendingQuantity : line.quantity),
         );
         return SafeArea(
           child: SizedBox(
@@ -73,7 +91,7 @@ void _showDineInCart(
                         ),
                       ),
                       Text(
-                        '${cart.values.fold<int>(0, (sum, line) => sum + line.quantity)} items',
+                        '$itemCount items',
                         style: const TextStyle(
                           color: GlobalColors.homeHeaderLabel,
                         ),
@@ -102,22 +120,39 @@ void _showDineInCart(
                           children: [
                             for (final line in cart.values.toList())
                               Card(
-                                color: AppPalette.white,
+                                color:
+                                    showNewItemHighlight &&
+                                        line.hasPendingAdditions
+                                    ? const Color(0xFFFFF3D6)
+                                    : AppPalette.white,
                                 elevation: 0,
                                 margin: const EdgeInsets.only(bottom: 10),
                                 shape: RoundedRectangleBorder(
-                                  side: const BorderSide(
-                                    color: GlobalColors.billingCardBorder,
+                                  side: BorderSide(
+                                    color:
+                                        showNewItemHighlight &&
+                                            line.hasPendingAdditions
+                                        ? const Color(0xFFE4B65F)
+                                        : GlobalColors.billingCardBorder,
                                   ),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                                 child: ListTile(
-                                  title: Text(
-                                    line.item.name,
-                                    style: const TextStyle(
-                                      color: GlobalColors.primaryText,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          line.item.name,
+                                          style: const TextStyle(
+                                            color: GlobalColors.primaryText,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      if (showNewItemHighlight &&
+                                          line.hasPendingAdditions)
+                                        const _PendingCartItemBadge(),
+                                    ],
                                   ),
                                   subtitle: Column(
                                     crossAxisAlignment:
@@ -166,8 +201,12 @@ void _showDineInCart(
                                             ),
                                             color: GlobalColors
                                                 .homeActionBackground,
-                                            onPressed: () =>
-                                                changeQuantity(line, -1),
+                                            onPressed:
+                                                line.quantity <=
+                                                    line.existingQuantity
+                                                ? null
+                                                : () =>
+                                                      changeQuantity(line, -1),
                                           ),
                                           Text('${line.quantity}'),
                                           IconButton(
@@ -195,8 +234,13 @@ void _showDineInCart(
                                     tooltip: 'Remove item',
                                     icon: const Icon(Icons.delete_outline),
                                     color: GlobalColors.secondaryText,
-                                    onPressed: () =>
-                                        changeQuantity(line, -line.quantity),
+                                    onPressed:
+                                        line.quantity <= line.existingQuantity
+                                        ? null
+                                        : () => changeQuantity(
+                                            line,
+                                            -line.quantity,
+                                          ),
                                   ),
                                 ),
                               ),
@@ -238,7 +282,7 @@ void _showDineInCart(
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: cart.isEmpty
+                      onPressed: !canConfirm()
                           ? null
                           : () async {
                               Navigator.of(context).pop();
@@ -308,6 +352,8 @@ class _DineInCartPage extends StatelessWidget {
     required this.onConfirm,
     required this.confirmLabel,
     required this.onEditNote,
+    required this.canConfirm,
+    required this.showNewItemHighlight,
   });
 
   final Map<String, _CartLine> cart;
@@ -315,6 +361,8 @@ class _DineInCartPage extends StatelessWidget {
   final Future<void> Function() onConfirm;
   final String confirmLabel;
   final Future<void> Function(_CartLine) onEditNote;
+  final bool canConfirm;
+  final bool showNewItemHighlight;
 
   @override
   Widget build(BuildContext context) {
@@ -324,16 +372,31 @@ class _DineInCartPage extends StatelessWidget {
     );
     final itemCount = cart.values.fold<int>(
       0,
-      (total, line) => total + line.quantity,
+      (total, line) =>
+          total + (showNewItemHighlight ? line.pendingQuantity : line.quantity),
     );
 
     void changeQuantity(_CartLine line, int change) {
       updatePage(() {
         final quantity = line.quantity + change;
-        if (quantity <= 0) {
-          cart.remove(line.item.id);
+        if (quantity <= line.existingQuantity) {
+          if (line.existingQuantity == 0) {
+            cart.remove(line.item.id);
+          } else {
+            cart[line.item.id] = _CartLine(
+              line.item,
+              line.existingQuantity,
+              note: line.note,
+              existingQuantity: line.existingQuantity,
+            );
+          }
         } else {
-          cart[line.item.id] = _CartLine(line.item, quantity, note: line.note);
+          cart[line.item.id] = _CartLine(
+            line.item,
+            quantity,
+            note: line.note,
+            existingQuantity: line.existingQuantity,
+          );
         }
       });
     }
@@ -382,12 +445,19 @@ class _DineInCartPage extends StatelessWidget {
                     children: [
                       for (final line in cart.values.toList())
                         Card(
-                          color: AppPalette.white,
+                          color:
+                              showNewItemHighlight && line.hasPendingAdditions
+                              ? const Color(0xFFFFF3D6)
+                              : AppPalette.white,
                           elevation: 0,
                           margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(
-                            side: const BorderSide(
-                              color: GlobalColors.billingCardBorder,
+                            side: BorderSide(
+                              color:
+                                  showNewItemHighlight &&
+                                      line.hasPendingAdditions
+                                  ? const Color(0xFFE4B65F)
+                                  : GlobalColors.billingCardBorder,
                             ),
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -409,6 +479,9 @@ class _DineInCartPage extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                    if (showNewItemHighlight &&
+                                        line.hasPendingAdditions)
+                                      const _PendingCartItemBadge(),
                                     IconButton(
                                       constraints:
                                           const BoxConstraints.tightFor(
@@ -422,8 +495,13 @@ class _DineInCartPage extends StatelessWidget {
                                         size: 20,
                                       ),
                                       color: GlobalColors.secondaryText,
-                                      onPressed: () =>
-                                          changeQuantity(line, -line.quantity),
+                                      onPressed:
+                                          line.quantity <= line.existingQuantity
+                                          ? null
+                                          : () => changeQuantity(
+                                              line,
+                                              -line.quantity,
+                                            ),
                                     ),
                                   ],
                                 ),
@@ -477,7 +555,10 @@ class _DineInCartPage extends StatelessWidget {
                                         size: 20,
                                       ),
                                       color: GlobalColors.homeActionBackground,
-                                      onPressed: () => changeQuantity(line, -1),
+                                      onPressed:
+                                          line.quantity <= line.existingQuantity
+                                          ? null
+                                          : () => changeQuantity(line, -1),
                                     ),
                                     Text('${line.quantity}'),
                                     IconButton(
@@ -543,9 +624,7 @@ class _DineInCartPage extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: cart.isEmpty
-                    ? null
-                    : () async => await onConfirm(),
+                onPressed: !canConfirm ? null : () async => await onConfirm(),
                 icon: const Icon(Icons.check_rounded),
                 label: Text(confirmLabel),
                 style: ElevatedButton.styleFrom(
@@ -576,7 +655,7 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   final _phoneController = TextEditingController();
-  final _nameFocusNode = FocusNode();
+  final _phoneFocusNode = FocusNode();
   late final Future<List<CustomerContact>> _contactsFuture;
   CustomerContact? _selectedContact;
   bool _isLookingUp = false;
@@ -585,25 +664,24 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
   @override
   void initState() {
     super.initState();
-    _contactsFuture = CustomerContact.loadAll();
+    _contactsFuture = CustomerContact.loadAllByPhone();
     _nameController = TextEditingController(text: widget.initialName);
-    _nameController.addListener(_lookupContact);
-    if (widget.initialName.trim().isNotEmpty) _lookupContact();
+    _phoneController.addListener(_lookupContact);
   }
 
   @override
   void dispose() {
-    _nameController.removeListener(_lookupContact);
+    _phoneController.removeListener(_lookupContact);
     _nameController.dispose();
     _phoneController.dispose();
-    _nameFocusNode.dispose();
+    _phoneFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _lookupContact() async {
-    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
     final version = ++_lookupVersion;
-    if (name.isEmpty) {
+    if (phone.isEmpty) {
       if (!mounted) return;
       setState(() {
         _selectedContact = null;
@@ -613,24 +691,26 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
     }
     if (!mounted) return;
     setState(() {
-      if (_selectedContact?.name.toLowerCase() != name.toLowerCase()) {
+      if (_selectedContact?.phone != phone) {
         _selectedContact = null;
       }
       _isLookingUp = true;
     });
-    final contact = await CustomerContact.findByName(name);
+    final contact = await CustomerContact.findByPhone(phone);
     if (!mounted || version != _lookupVersion) return;
     setState(() {
       _selectedContact = contact;
       _isLookingUp = false;
-      if (contact != null) _phoneController.text = contact.phone;
+      if (contact != null) _nameController.text = contact.name;
     });
   }
 
   Future<void> _confirm() async {
     if (!_formKey.currentState!.validate()) return;
     final name = _nameController.text.trim();
-    var contact = await CustomerContact.findByName(name);
+    var contact = await CustomerContact.findByPhone(
+      _phoneController.text.trim(),
+    );
     if (!mounted) return;
     if (contact == null) {
       contact = await showDialog<CustomerContact>(
@@ -727,15 +807,18 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
                     ],
                   ),
                   const SizedBox(height: 22),
-                  _buildCustomerField(),
+                  _buildCustomerNumberField(),
                   const SizedBox(height: 14),
                   _DineInCustomerField(
-                    controller: _phoneController,
-                    label: 'Customer phone number',
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
+                    controller: _nameController,
+                    label: 'Customer name',
+                    icon: Icons.person_outline,
+                    capitalization: TextCapitalization.words,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Enter a customer name'
+                        : null,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   ContactLookupStatus(
                     contact: _selectedContact,
                     isLoading: _isLookingUp,
@@ -770,37 +853,34 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
     );
   }
 
-  Widget _buildCustomerField() => FutureBuilder<List<CustomerContact>>(
+  Widget _buildCustomerNumberField() => FutureBuilder<List<CustomerContact>>(
     future: _contactsFuture,
     builder: (context, snapshot) => RawAutocomplete<CustomerContact>(
-      textEditingController: _nameController,
-      focusNode: _nameFocusNode,
-      displayStringForOption: (contact) => contact.name,
+      textEditingController: _phoneController,
+      focusNode: _phoneFocusNode,
+      displayStringForOption: (contact) => contact.phone,
       optionsBuilder: (value) {
-        final query = value.text.trim().toLowerCase();
+        final query = value.text.trim();
         if (query.isEmpty || snapshot.data == null) {
           return const <CustomerContact>[];
         }
         return snapshot.data!
-            .where((contact) => contact.name.toLowerCase().contains(query))
+            .where((contact) => contact.phone.contains(query))
             .take(8);
       },
       onSelected: (contact) {
         setState(() {
           _selectedContact = contact;
-          _phoneController.text = contact.phone;
+          _nameController.text = contact.name;
         });
       },
       fieldViewBuilder: (context, controller, focusNode, _) =>
           _DineInCustomerField(
             controller: controller,
             focusNode: focusNode,
-            label: 'Customer name',
-            icon: Icons.person_outline,
-            capitalization: TextCapitalization.words,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'Enter a customer name'
-                : null,
+            label: 'Customer number',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
           ),
       optionsViewBuilder: (context, onSelected, options) => Align(
         alignment: Alignment.topLeft,
@@ -817,10 +897,8 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
                   .map(
                     (contact) => ListTile(
                       dense: true,
-                      title: Text(contact.name),
-                      subtitle: contact.phone.isEmpty
-                          ? null
-                          : Text(contact.phone),
+                      title: Text(contact.phone),
+                      subtitle: Text(contact.name),
                       onTap: () => onSelected(contact),
                     ),
                   )
@@ -935,8 +1013,41 @@ class _DineInCustomerAction extends StatelessWidget {
 }
 
 class _CartLine {
-  const _CartLine(this.item, this.quantity, {this.note = ''});
+  const _CartLine(
+    this.item,
+    this.quantity, {
+    this.note = '',
+    this.existingQuantity = 0,
+  });
   final DineInMenuItem item;
   final int quantity;
   final String note;
+  final int existingQuantity;
+
+  bool get hasPendingAdditions => quantity > existingQuantity;
+  int get pendingQuantity =>
+      hasPendingAdditions ? quantity - existingQuantity : 0;
+}
+
+class _PendingCartItemBadge extends StatelessWidget {
+  const _PendingCartItemBadge();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(left: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFE4A8),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: const Text(
+      'NEW',
+      style: TextStyle(
+        color: Color(0xFF975400),
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.6,
+      ),
+    ),
+  );
 }
