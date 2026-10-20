@@ -4,6 +4,7 @@ class _TableContent extends StatelessWidget {
   const _TableContent({
     required this.sections,
     required this.tables,
+    required this.occupiedTableNumbers,
     required this.selectedSectionId,
     required this.onSectionChanged,
     required this.onTableSelected,
@@ -12,6 +13,7 @@ class _TableContent extends StatelessWidget {
 
   final List<TableSection> sections;
   final List<TableLayoutTable> tables;
+  final Set<String> occupiedTableNumbers;
   final String? selectedSectionId;
   final ValueChanged<String> onSectionChanged;
   final ValueChanged<TableLayoutTable> onTableSelected;
@@ -26,6 +28,7 @@ class _TableContent extends StatelessWidget {
             ? const _EmptyTables()
             : _TableGrid(
                 tables: tables,
+                occupiedTableNumbers: occupiedTableNumbers,
                 isMobile: isMobile,
                 onTableSelected: onTableSelected,
                 shrinkWrap: !constraints.maxHeight.isFinite,
@@ -102,12 +105,14 @@ class _TableContent extends StatelessWidget {
 class _TableGrid extends StatelessWidget {
   const _TableGrid({
     required this.tables,
+    required this.occupiedTableNumbers,
     required this.isMobile,
     required this.onTableSelected,
     this.shrinkWrap = false,
   });
 
   final List<TableLayoutTable> tables;
+  final Set<String> occupiedTableNumbers;
   final bool isMobile;
   final ValueChanged<TableLayoutTable> onTableSelected;
   final bool shrinkWrap;
@@ -137,6 +142,9 @@ class _TableGrid extends StatelessWidget {
         ),
         itemBuilder: (context, index) => _TableTile(
           table: tables[index],
+          isOccupied: occupiedTableNumbers.contains(
+            tables[index].number.trim().toLowerCase(),
+          ),
           onTap: () => onTableSelected(tables[index]),
         ),
       );
@@ -145,9 +153,10 @@ class _TableGrid extends StatelessWidget {
 }
 
 class _TableTile extends StatelessWidget {
-  const _TableTile({required this.table, this.onTap});
+  const _TableTile({required this.table, required this.isOccupied, this.onTap});
 
   final TableLayoutTable table;
+  final bool isOccupied;
   final VoidCallback? onTap;
 
   @override
@@ -162,10 +171,12 @@ class _TableTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(isRound ? 80 : 18),
         child: Ink(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isOccupied ? const Color(0xFF90EE90) : Colors.white,
             borderRadius: BorderRadius.circular(isRound ? 80 : 18),
             border: Border.all(
-              color: GlobalColors.billingCardBorder,
+              color: isOccupied
+                  ? const Color(0xFF246B24)
+                  : GlobalColors.billingCardBorder,
               width: 1.5,
             ),
             boxShadow: const [
@@ -180,21 +191,36 @@ class _TableTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.table_restaurant_outlined,
-                  color: GlobalColors.homeActionBackground,
+                  color: isOccupied
+                      ? const Color(0xFF246B24)
+                      : GlobalColors.homeActionBackground,
                   size: 30,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   table.number,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: GlobalColors.primaryText,
+                  style: TextStyle(
+                    color: isOccupied
+                        ? const Color(0xFF246B24)
+                        : GlobalColors.primaryText,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (isOccupied) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Occupied',
+                    style: TextStyle(
+                      color: Color(0xFF246B24),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -61,26 +61,10 @@ class CategoryApi {
       categoryLvl3: results[2],
     );
 
-    // debugPrint('========================================');
-    // debugPrint('API DATA RECEIVED');
-    // debugPrint('Level 1: ${payload.categoryLvl1.length}');
-    // debugPrint('Level 2: ${payload.categoryLvl2.length}');
-    // debugPrint('Level 3: ${payload.categoryLvl3.length}');
-    // debugPrint('========================================');
-
     final result = await saveCategories(
       payload,
       clearExistingData: clearExistingData,
     );
-
-    // debugPrint('========================================');
-    // debugPrint('CATEGORY SYNC FINISHED');
-    // debugPrint('Level 1 saved: ${result.categoryLvl1}');
-    // debugPrint('Level 2 saved: ${result.categoryLvl2}');
-    // debugPrint('Level 3 saved: ${result.categoryLvl3}');
-    // debugPrint('Total saved: ${result.total}');
-    // debugPrint('========================================');
-
     return result;
   }
 
@@ -96,10 +80,6 @@ class CategoryApi {
         'Category API URL is not configured.',
       );
     }
-
-    // debugPrint('----------------------------------------');
-    // debugPrint('CATEGORY API REQUEST');
-    // debugPrint(apiUrl);
 
     final stopwatch = Stopwatch()..start();
 
@@ -167,10 +147,6 @@ class CategoryApi {
       AppDatabase.fudo,
     );
 
-    // debugPrint('========================================');
-    // debugPrint('DATABASE SAVE STARTED');
-    // debugPrint('========================================');
-
     debugPrint(
       'Level 1 rows: ${payload.categoryLvl1.length}',
     );
@@ -231,14 +207,6 @@ class CategoryApi {
             'Cat_Lv3_Code',
           ],
         );
-
-        // debugPrint('----------------------------------------');
-        // debugPrint('ROWS SAVED');
-        // debugPrint('Category Type: $categoryTypes');
-        // debugPrint('Category Level 1: $categoryLvl1');
-        // debugPrint('Category Level 2: $categoryLvl2');
-        // debugPrint('Category Level 3: $categoryLvl3');
-        // debugPrint('----------------------------------------');
 
         return CategorySyncResult(
           categoryTypes: categoryTypes,

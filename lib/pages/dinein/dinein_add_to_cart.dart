@@ -123,7 +123,7 @@ void _showDineInCart(
                                 color:
                                     showNewItemHighlight &&
                                         line.hasPendingAdditions
-                                    ? const Color(0xFFFFF3D6)
+                                    ? const Color(0xFF90EE90)
                                     : AppPalette.white,
                                 elevation: 0,
                                 margin: const EdgeInsets.only(bottom: 10),
@@ -447,7 +447,7 @@ class _DineInCartPage extends StatelessWidget {
                         Card(
                           color:
                               showNewItemHighlight && line.hasPendingAdditions
-                              ? const Color(0xFFFFF3D6)
+                              ? const Color(0xFF90EE90)
                               : AppPalette.white,
                           elevation: 0,
                           margin: const EdgeInsets.only(bottom: 10),

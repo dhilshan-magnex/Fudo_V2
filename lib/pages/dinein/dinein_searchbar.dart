@@ -65,13 +65,37 @@ class _MenuSearchBar extends StatelessWidget {
               label: const Text('All'),
               selected: selectedCategory == null,
               onSelected: (_) => onCategoryChanged(null),
+              selectedColor: GlobalColors.homeActionBackground,
+              labelStyle: TextStyle(
+                color: selectedCategory == null
+                    ? Colors.white
+                    : GlobalColors.primaryText,
+                fontWeight: FontWeight.w700,
+              ),
+              side: const BorderSide(color: GlobalColors.billingCardBorder),
             ),
             for (final category in categories) ...[
               const SizedBox(width: 8),
-              ChoiceChip(
-                label: Text(category.name),
-                selected: category.code == selectedCategory,
-                onSelected: (_) => onCategoryChanged(category.code),
+              Builder(
+                builder: (context) {
+                  final selected = category.code == selectedCategory;
+                  final color = _colorFromCode(category.colorCode);
+                  return ChoiceChip(
+                    label: Text(category.name),
+                    selected: selected,
+                    onSelected: (_) => onCategoryChanged(category.code),
+                    selectedColor: color,
+                    labelStyle: TextStyle(
+                      color: selected
+                          ? (color.computeLuminance() > 0.5
+                                ? GlobalColors.primaryText
+                                : Colors.white)
+                          : GlobalColors.primaryText,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    side: BorderSide(color: color),
+                  );
+                },
               ),
             ],
           ],

@@ -269,10 +269,16 @@ class _MenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
+    shape: RoundedRectangleBorder(
+      side: BorderSide(color: _colorFromCode(item.colorCode)),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: () => onAddToCart(item),
-      borderRadius: BorderRadius.circular(20),
+      customBorder: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -350,7 +356,7 @@ class _DineInData {
 }
 
 class DineInCategory {
-  const DineInCategory(this.code, this.name, this.order);
+  const DineInCategory(this.code, this.name, this.order, this.colorCode);
   factory DineInCategory.fromRow(Map<String, dynamic> row) {
     final code = row['Cat_Code']?.toString().trim() ?? '';
     final name = row['Cat_Name']?.toString().trim() ?? '';
@@ -358,11 +364,13 @@ class DineInCategory {
       code,
       name.isEmpty ? code : name,
       num.tryParse(row['Display_Order_ID']?.toString() ?? '')?.toInt() ?? 0,
+      row['Color_Code']?.toString() ?? '',
     );
   }
   final String code;
   final String name;
   final int order;
+  final String colorCode;
 }
 
 class DineInMenuItem {

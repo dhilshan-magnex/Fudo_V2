@@ -457,9 +457,7 @@ void _showConfirmedOrder(
                         color: GlobalColors.billingRowDivider,
                       ),
                     Container(
-                      color: order.items[index].isNewlyAdded
-                          ? const Color(0xFFFFF3D6)
-                          : Colors.white,
+                      color: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -478,18 +476,6 @@ void _showConfirmedOrder(
                                   ),
                                 ),
 
-                                if (order.items[index].isNewlyAdded) ...[
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'NEW',
-                                    style: TextStyle(
-                                      color: Color(0xFF975400),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
                                 const SizedBox(height: 4),
                                 Text(
                                   '${order.items[index].quantity} × ${priceFormat.format(order.items[index].unitPrice)}',
