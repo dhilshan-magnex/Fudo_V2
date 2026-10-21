@@ -23,6 +23,7 @@ class ConfirmedOrderItem {
 class ConfirmedOrder {
   const ConfirmedOrder({
     required this.billId,
+    required this.refNo,
     required this.type,
     required this.items,
     this.tableNumber,
@@ -36,6 +37,7 @@ class ConfirmedOrder {
   });
 
   final String billId;
+  final String refNo;
   final String type;
   final List<ConfirmedOrderItem> items;
   final String? tableNumber;
@@ -89,6 +91,7 @@ class RunningOrdersStore extends ChangeNotifier {
         : _completedOrders.removeAt(completedIndex);
     final updatedOrder = ConfirmedOrder(
       billId: order.billId,
+      refNo: order.refNo,
       type: order.type,
       items: List.unmodifiable([
         ...order.items.map(
@@ -135,6 +138,8 @@ class RunningOrdersStore extends ChangeNotifier {
 
   ConfirmedOrder addOrder({
     required List<ConfirmedOrderItem> items,
+    String? billId,
+    String? refNo,
     String? tableNumber,
     String? customerName,
     String? customerPhone,
@@ -149,7 +154,8 @@ class RunningOrdersStore extends ChangeNotifier {
       throw ArgumentError('An order must contain at least one item.');
     }
     final order = ConfirmedOrder(
-      billId: 'B-${_nextBillNumber.toString().padLeft(4, '0')}',
+      billId: billId ?? 'B-${_nextBillNumber.toString().padLeft(4, '0')}',
+      refNo: refNo ?? 'REF-${_nextBillNumber.toString().padLeft(6, '0')}',
       type: orderType ?? (tableNumber == null ? 'Dine In' : 'Table'),
       items: List.unmodifiable(items),
       tableNumber: tableNumber,

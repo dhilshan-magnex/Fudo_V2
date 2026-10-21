@@ -5,7 +5,7 @@ import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/features/tables/domain/table_models.dart';
 import 'package:fudo_v2/features/tables/state/table_layout_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
-import 'package:fudo_v2/features/orders/presentation/dinein/dinein_page.dart';
+import 'package:fudo_v2/features/orders/pages/dinein/dinein_page.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
 import 'package:fudo_v2/shared/widgets/contact_form.dart';

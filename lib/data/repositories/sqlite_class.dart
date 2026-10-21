@@ -6,15 +6,6 @@ class SQLiteClass {
   // GET ALL TABLE DATA
   // ============================================================
 
-  /// Returns all rows from the requested table.
-  ///
-  /// For SQLite clients:
-  ///     Reads directly from the local SQLite database.
-  ///
-  /// For API clients:
-  ///     ApiRouteRegistry determines which API should
-  ///     synchronize the requested table.
-  ///     After synchronization, the data is read from SQLite.
   static Future<List<Map<String, dynamic>>> getTableData(
     String clientId,
     AppDatabase dbType,
@@ -45,17 +36,6 @@ class SQLiteClass {
   // GET DATA WITH WHERE CONDITION
   // ============================================================
 
-  /// Returns rows from the requested table using a WHERE condition.
-  ///
-  /// Example:
-  ///
-  /// final rows = await SQLiteClass.getTableDataWhere(
-  ///   clientId,
-  ///   AppDatabase.fudo,
-  ///   'Category_Lvl1',
-  ///   where: 'Cat_Code = ?',
-  ///   whereArgs: ['001'],
-  /// );
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
     String clientId,
     AppDatabase dbType,

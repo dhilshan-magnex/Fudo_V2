@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:fudo_v2/core/theme/global_colors.dart';
-import 'package:fudo_v2/features/orders/presentation/dinein/dinein_page.dart';
+import 'package:fudo_v2/features/orders/pages/dinein/dinein_page.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
 import 'package:fudo_v2/shared/widgets/contact_form.dart';

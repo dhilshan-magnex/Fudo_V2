@@ -1,9 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fudo_v2/core/session/running_orders_store.dart';
+import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
+import 'package:fudo_v2/features/orders/models/order.dart';
+import 'package:fudo_v2/features/orders/state/order_provider.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
 import 'package:fudo_v2/shared/widgets/buttons/discard_button.dart';
@@ -254,18 +260,52 @@ class _DineInPageState extends State<DineInPage> {
     if (widget.orderToUpdate case final order?) {
       store.addItems(order.billId, items);
     } else {
-      store.addOrder(
-        items: items,
-        tableNumber: widget.tableNumber,
-        customerName: customer?.name ?? widget.customerName,
-        customerPhone: widget.customerPhone ?? customer?.phone,
-        deliveryAddress: widget.deliveryAddress ?? customer?.address,
-        deliveryArea: widget.deliveryArea,
-        orderNote: widget.orderNote,
-        orderType: widget.orderType,
-        waiterName: widget.waiterName,
-        pax: widget.pax,
-      );
+      try {
+        final savedOrder = await context.read<OrderProvider>().createOrder(
+          // The client ID is the only POS-level value currently available in
+          // the session. Replace this with a terminal/Counter_No setting when
+          // that configuration is added.
+          posId: context.read<SessionProvider>().clientId ?? 'DEFAULT',
+          type: widget.orderType ?? (widget.tableNumber == null ? 'Dine In' : 'Table'),
+          items: items
+              .map((item) => OrderItem(
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    note: item.note,
+                  ))
+              .toList(),
+          tableNumber: widget.tableNumber,
+          customerName: customer?.name ?? widget.customerName,
+          customerPhone: widget.customerPhone ?? customer?.phone,
+          deliveryAddress: widget.deliveryAddress ?? customer?.address,
+          deliveryArea: widget.deliveryArea,
+          orderNote: widget.orderNote,
+          waiterName: widget.waiterName,
+          pax: widget.pax,
+        );
+        store.addOrder(
+          billId: savedOrder.billNo,
+          refNo: savedOrder.refNo,
+          items: items,
+          tableNumber: widget.tableNumber,
+          customerName: customer?.name ?? widget.customerName,
+          customerPhone: widget.customerPhone ?? customer?.phone,
+          deliveryAddress: widget.deliveryAddress ?? customer?.address,
+          deliveryArea: widget.deliveryArea,
+          orderNote: widget.orderNote,
+          orderType: widget.orderType,
+          waiterName: widget.waiterName,
+          pax: widget.pax,
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save the order: $error')),
+        );
+        return;
+      }
     }
     setState(() => _isLeavingPage = true);
     Navigator.of(context).pop(true);

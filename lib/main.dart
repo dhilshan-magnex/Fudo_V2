@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/session/session_provider.dart';
 import 'core/session/running_orders_store.dart';
+import 'features/orders/data/order_database.dart';
+import 'features/orders/data/order_repository.dart';
+import 'features/orders/state/order_provider.dart';
 import 'features/tables/state/table_layout_provider.dart';
 import 'features/authentication/presentation/login_page.dart';
 import 'data/api/api_http_client.dart';
@@ -19,6 +22,9 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SessionProvider()),
+        ChangeNotifierProvider(
+          create: (_) => OrderProvider(OrderRepository(OrderDatabase())),
+        ),
         ChangeNotifierProvider(create: (_) => RunningOrdersStore()),
         ChangeNotifierProvider(create: (_) => TableLayoutProvider()),
       ],

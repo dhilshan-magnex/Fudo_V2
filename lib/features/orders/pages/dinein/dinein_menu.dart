@@ -284,11 +284,7 @@ class _MenuTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.restaurant_menu_rounded,
-              color: _colorFromCode(item.colorCode),
-              size: 30,
-            ),
+            _MenuItemImage(item: item),
             const Spacer(),
             Text(
               item.name,
@@ -314,6 +310,72 @@ class _MenuTile extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _MenuItemImage extends StatelessWidget {
+  const _MenuItemImage({required this.item});
+
+  final DineInMenuItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = item.image;
+    if (image is Uint8List && image.isNotEmpty) {
+      return _image(Image.memory(image, fit: BoxFit.cover));
+    }
+    if (image is List<int> && image.isNotEmpty) {
+      return _image(Image.memory(Uint8List.fromList(image), fit: BoxFit.cover));
+    }
+
+    if (image is String) {
+      final value = image.trim();
+      final bytes = _base64ImageBytes(value);
+      if (bytes != null) return _image(Image.memory(bytes, fit: BoxFit.cover));
+
+      final networkValue = value.startsWith('www.') ? 'https://$value' : value;
+      final uri = Uri.tryParse(networkValue);
+      if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+        return _image(
+          Image.network(
+            networkValue,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _fallback(),
+          ),
+        );
+      }
+    }
+
+    return _fallback();
+  }
+
+  Widget _image(Image image) => ClipRRect(
+    borderRadius: BorderRadius.circular(10),
+    child: SizedBox(width: 44, height: 44, child: image),
+  );
+
+  Widget _fallback() => SizedBox(
+    width: 44,
+    height: 44,
+    child: Icon(
+      Icons.restaurant_menu_rounded,
+      color: _colorFromCode(item.colorCode),
+      size: 30,
+    ),
+  );
+
+  Uint8List? _base64ImageBytes(String value) {
+    final isDataUri = value.startsWith('data:image/');
+    // Do not attempt to decode ordinary filenames or relative paths as base64.
+    final isLikelyBase64 = value.length > 100 &&
+        RegExp(r'^[A-Za-z0-9+/=\r\n]+$').hasMatch(value);
+    if (!isDataUri && !isLikelyBase64) return null;
+    final encoded = isDataUri ? value.substring(value.indexOf(',') + 1) : value;
+    try {
+      return base64Decode(encoded);
+    } on FormatException {
+      return null;
+    }
+  }
 }
 
 Color _colorFromCode(String value) {
@@ -383,6 +445,7 @@ class DineInMenuItem {
     required this.colorCode,
     required this.order,
     required this.isAvailableForDineIn,
+    this.image,
   });
   factory DineInMenuItem.fromRow(Map<String, dynamic> row) {
     final dine = row['Dine']?.toString().trim().toLowerCase();
@@ -401,6 +464,7 @@ class DineInMenuItem {
           dine == '1' ||
           dine == 'true' ||
           dine == 'yes',
+      image: row['Menu_Image'],
     );
   }
   final String id;
@@ -411,4 +475,5 @@ class DineInMenuItem {
   final String colorCode;
   final int order;
   final bool isAvailableForDineIn;
+  final Object? image;
 }
