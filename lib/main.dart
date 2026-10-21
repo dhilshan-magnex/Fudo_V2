@@ -2,10 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'session/session_provider.dart';
-import 'session/running_orders_store.dart';
-import 'pages/login_page.dart';
-import 'api/api_http_client.dart';
+import 'core/session/session_provider.dart';
+import 'core/session/running_orders_store.dart';
+import 'features/tables/state/table_layout_provider.dart';
+import 'features/authentication/presentation/login_page.dart';
+import 'data/api/api_http_client.dart';
 
 void main() {
   // Use sqflite_common_ffi only for desktop platforms
@@ -19,6 +20,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(create: (_) => RunningOrdersStore()),
+        ChangeNotifierProvider(create: (_) => TableLayoutProvider()),
       ],
       child: const MyApp(),
     ),
