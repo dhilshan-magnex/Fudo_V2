@@ -110,17 +110,9 @@ class DBManager {
     final databaseDirectory = await getDatabasesPath();
     final databasePath = join(databaseDirectory, config.fileName);
 
-    // debugPrint('========================================');
-    // debugPrint('DATABASE OPEN');
-    // debugPrint('Database type: ${dbType.name}');
-    // debugPrint('Database path: $databasePath');
-    // debugPrint('========================================');
-
     await _refreshInvalidDatabase(databasePath, config);
 
     await _copyAssetDatabaseIfMissing(databasePath, config.assetPath);
-
-    // debugPrint('Opening database: $databasePath');
 
     return openDatabase(databasePath);
   }

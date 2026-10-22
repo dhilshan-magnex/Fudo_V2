@@ -86,6 +86,7 @@ class OrderRepository {
         'Sales_Date': saved.createdAt.toIso8601String(),
         'Bill_Value': saved.subtotal,
         'Recall_Bill_Flag': 0,
+        'SC_Included': 0,
       });
       return saved;
     });

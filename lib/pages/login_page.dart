@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
-import 'package:fudo_v2/features/authentication/data/auth_service.dart';
-import 'package:fudo_v2/features/authentication/data/client_service.dart';
-import 'package:fudo_v2/features/authentication/pages/home/home_page.dart';
+import 'package:fudo_v2/features/authentication/auth_service.dart';
+import 'package:fudo_v2/features/authentication/client_service.dart';
+import 'package:fudo_v2/pages/home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

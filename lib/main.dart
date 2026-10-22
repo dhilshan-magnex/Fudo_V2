@@ -7,8 +7,8 @@ import 'core/session/running_orders_store.dart';
 import 'features/orders/data/order_database.dart';
 import 'features/orders/data/order_repository.dart';
 import 'features/orders/state/order_provider.dart';
-import 'features/authentication/pages/tables/state/table_layout_provider.dart';
-import 'features/authentication/pages/login_page.dart';
+import 'pages/tables/state/table_layout_provider.dart';
+import 'pages/login_page.dart';
 import 'data/api/api_http_client.dart';
 
 void main() {
