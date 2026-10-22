@@ -11,7 +11,9 @@ class OrderRepository {
     required String type,
     String? tableNumber,
   }) async {
-    if (type == 'Table' && tableNumber != null && tableNumber.trim().isNotEmpty) {
+    if (type == 'Table' &&
+        tableNumber != null &&
+        tableNumber.trim().isNotEmpty) {
       return tableNumber.trim();
     }
 
@@ -39,8 +41,10 @@ class OrderRepository {
       return (result.single['next_bill_no'] as num).toInt().toString();
     });
   }
+
   Future<void> save(Order order) async {
-    if (order.billNo == null) throw ArgumentError('Bill number is required before saving Tran_Header.');
+    if (order.billNo == null)
+      throw ArgumentError('Bill number is required before saving Tran_Header.');
     final db = await _database.database;
     await db.insert('Tran_Header', {
       'Bill_No': int.parse(order.billNo!),
@@ -48,7 +52,7 @@ class OrderRepository {
       'Ref_Type': _refType(order.type),
       'Counter_No': order.posId,
       'Customer_Name': order.customerName,
-      'PAX': order.pax,
+      'PAX': order.pax ?? 1,
       'Header_Ref': order.tableNumber,
       'Header_Ref1': order.orderNote,
       'Bill_Date': order.createdAt.toIso8601String(),
@@ -57,6 +61,7 @@ class OrderRepository {
       'Recall_Bill_Flag': order.status == OrderStatus.voided ? 1 : 0,
     });
   }
+
   Future<Order> createOrder(Order order) async {
     final db = await _database.database;
     return db.transaction((tx) async {
@@ -71,7 +76,7 @@ class OrderRepository {
         'Ref_Type': _refType(saved.type),
         'Counter_No': saved.posId,
         'Customer_Name': saved.customerName,
-        'PAX': saved.pax,
+        'PAX': saved.pax ?? 1,
         'Header_Ref': saved.tableNumber,
         'Header_Ref1': saved.orderNote,
         'Bill_Date': saved.createdAt.toIso8601String(),
@@ -82,18 +87,39 @@ class OrderRepository {
       return saved;
     });
   }
-  Future<List<Order>> getAll() async { final db = await _database.database; final rows = await db.query('Tran_Header', orderBy: 'Bill_No DESC'); return rows.map(_fromHeader).toList(); }
-  Future<Order?> getByRefNo(String refNo) async { final db = await _database.database; final rows = await db.query('Tran_Header', where: 'Ref_No = ?', whereArgs: [refNo], limit: 1); return rows.isEmpty ? null : _fromHeader(rows.single); }
-  Future<void> delete(String refNo) async { final db = await _database.database; await db.delete('Tran_Header', where: 'Ref_No = ?', whereArgs: [refNo]); }
+
+  Future<List<Order>> getAll() async {
+    final db = await _database.database;
+    final rows = await db.query('Tran_Header', orderBy: 'Bill_No DESC');
+    return rows.map(_fromHeader).toList();
+  }
+
+  Future<Order?> getByRefNo(String refNo) async {
+    final db = await _database.database;
+    final rows = await db.query(
+      'Tran_Header',
+      where: 'Ref_No = ?',
+      whereArgs: [refNo],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : _fromHeader(rows.single);
+  }
+
+  Future<void> delete(String refNo) async {
+    final db = await _database.database;
+    await db.delete('Tran_Header', where: 'Ref_No = ?', whereArgs: [refNo]);
+  }
+
   Future<String> assignNextBillNo(String refNo) async {
     final order = await getByRefNo(refNo);
-      if (order == null) throw StateError('Order $refNo was not found.');
-      if (order.billNo != null) return order.billNo!;
+    if (order == null) throw StateError('Order $refNo was not found.');
+    if (order.billNo != null) return order.billNo!;
     throw StateError('Legacy Tran_Header order $refNo has no Bill_No.');
   }
+
   String _refType(String type) => switch (type) {
     'Delivery' => 'DL',
-    'Table' => 'TB',
+    'Table' => 'TO',
     'Take Away' => 'TA',
     'Dine In' => 'DI',
     _ => 'OR',
@@ -107,5 +133,20 @@ class OrderRepository {
     _ => 'Order',
   };
 
-  Order _fromHeader(Map<String, Object?> row) => Order(refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}', billNo: (row['Bill_No'] as num).toInt().toString(), type: _orderType(row['Ref_Type'] as String? ?? ''), items: const [], status: (row['Recall_Bill_Flag'] as int? ?? 0) == 1 ? OrderStatus.voided : OrderStatus.paid, createdAt: DateTime.tryParse(row['Bill_Date'] as String? ?? '') ?? DateTime.now(), posId: row['Counter_No'] as String? ?? '', tableNumber: row['Header_Ref'] as String?, customerName: row['Customer_Name'] as String?, orderNote: row['Header_Ref1'] as String?, pax: row['PAX'] as int?);
+  Order _fromHeader(Map<String, Object?> row) => Order(
+    refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}',
+    billNo: (row['Bill_No'] as num).toInt().toString(),
+    type: _orderType(row['Ref_Type'] as String? ?? ''),
+    items: const [],
+    status: (row['Recall_Bill_Flag'] as int? ?? 0) == 1
+        ? OrderStatus.voided
+        : OrderStatus.paid,
+    createdAt:
+        DateTime.tryParse(row['Bill_Date'] as String? ?? '') ?? DateTime.now(),
+    posId: row['Counter_No'] as String? ?? '',
+    tableNumber: row['Header_Ref'] as String?,
+    customerName: row['Customer_Name'] as String?,
+    orderNote: row['Header_Ref1'] as String?,
+    pax: row['PAX'] as int?,
+  );
 }

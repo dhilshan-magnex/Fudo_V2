@@ -21,7 +21,7 @@ class OrderProvider extends ChangeNotifier {
   Future<Order> createOrder({required String posId, required String type, required List<OrderItem> items, String? tableNumber, String? customerName, String? customerPhone, String? deliveryAddress, String? deliveryArea, String? orderNote, String? waiterName, int? pax}) async {
     if (posId.trim().isEmpty) throw ArgumentError.value(posId, 'posId', 'cannot be empty');
     if (items.isEmpty) throw ArgumentError('An order must contain at least one item.');
-    final order = Order(refNo: await _repository.createRefNo(type: type, tableNumber: tableNumber), type: type, items: List.unmodifiable(items), status: OrderStatus.open, createdAt: DateTime.now(), posId: posId.trim(), tableNumber: tableNumber, customerName: customerName, customerPhone: customerPhone, deliveryAddress: deliveryAddress, deliveryArea: deliveryArea, orderNote: orderNote, waiterName: waiterName, pax: pax);
+    final order = Order(refNo: await _repository.createRefNo(type: type, tableNumber: tableNumber), type: type, items: List.unmodifiable(items), status: OrderStatus.open, createdAt: DateTime.now(), posId: posId.trim(), tableNumber: tableNumber, customerName: customerName, customerPhone: customerPhone, deliveryAddress: deliveryAddress, deliveryArea: deliveryArea, orderNote: orderNote, waiterName: waiterName, pax: pax ?? 1);
     final savedOrder = await _repository.createOrder(order);
     _orders = [savedOrder, ..._orders]; notifyListeners();
     return savedOrder;

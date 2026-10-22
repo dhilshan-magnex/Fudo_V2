@@ -297,7 +297,7 @@ class _DineInPageState extends State<DineInPage> {
           orderNote: widget.orderNote,
           orderType: widget.orderType,
           waiterName: widget.waiterName,
-          pax: widget.pax,
+          pax: savedOrder.pax,
         );
       } catch (error) {
         if (!mounted) return;
