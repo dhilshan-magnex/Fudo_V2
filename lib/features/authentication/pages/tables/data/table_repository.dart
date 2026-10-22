@@ -1,5 +1,5 @@
 import 'package:fudo_v2/data/database/db_manager.dart';
-import 'package:fudo_v2/features/tables/domain/table_models.dart';
+import 'package:fudo_v2/features/authentication/pages/tables/domain/table_models.dart';
 
 /// Local table-layout data access. Data Sync keeps these tables current for
 /// API clients, so this repository remains usable when the POS is offline.

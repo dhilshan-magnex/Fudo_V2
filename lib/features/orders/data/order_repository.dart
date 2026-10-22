@@ -43,8 +43,9 @@ class OrderRepository {
   }
 
   Future<void> save(Order order) async {
-    if (order.billNo == null)
+    if (order.billNo == null) {
       throw ArgumentError('Bill number is required before saving Tran_Header.');
+    }
     final db = await _database.database;
     await db.insert('Tran_Header', {
       'Bill_No': int.parse(order.billNo!),
@@ -53,6 +54,7 @@ class OrderRepository {
       'Counter_No': order.posId,
       'Customer_Name': order.customerName,
       'PAX': order.pax ?? 1,
+      'Taxable': 0,
       'Header_Ref': order.tableNumber,
       'Header_Ref1': order.orderNote,
       'Bill_Date': order.createdAt.toIso8601String(),
@@ -77,6 +79,7 @@ class OrderRepository {
         'Counter_No': saved.posId,
         'Customer_Name': saved.customerName,
         'PAX': saved.pax ?? 1,
+        'Taxable': 0,
         'Header_Ref': saved.tableNumber,
         'Header_Ref1': saved.orderNote,
         'Bill_Date': saved.createdAt.toIso8601String(),

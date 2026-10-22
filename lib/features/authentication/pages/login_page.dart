@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/features/authentication/data/auth_service.dart';
 import 'package:fudo_v2/features/authentication/data/client_service.dart';
-import 'package:fudo_v2/features/home/presentation/home_page.dart';
+import 'package:fudo_v2/features/authentication/pages/home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

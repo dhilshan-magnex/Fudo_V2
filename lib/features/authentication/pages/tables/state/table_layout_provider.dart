@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:fudo_v2/features/tables/data/table_repository.dart';
-import 'package:fudo_v2/features/tables/domain/table_models.dart';
+import 'package:fudo_v2/features/authentication/pages/tables/data/table_repository.dart';
+import 'package:fudo_v2/features/authentication/pages/tables/domain/table_models.dart';
 
 class TableLayoutProvider extends ChangeNotifier {
   TableLayoutProvider({TableRepository? repository})
