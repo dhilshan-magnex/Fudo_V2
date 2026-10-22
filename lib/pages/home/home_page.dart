@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
-import 'package:fudo_v2/features/authentication/client_service.dart';
+import 'package:fudo_v2/functions/authentication/client_service.dart';
 import 'package:fudo_v2/pages/billing/billing_page.dart';
 import 'package:fudo_v2/pages/data_sync/data_sync_page.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';

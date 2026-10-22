@@ -176,6 +176,7 @@ class _OrderListHeader extends StatelessWidget {
       children: [
         Expanded(flex: _orderIdColumnFlex, child: _ColumnLabel('BILL ID')),
         Expanded(flex: _orderTypeColumnFlex, child: _ColumnLabel('ORDER TYPE')),
+        Expanded(flex: _orderRefNoColumnFlex, child: _ColumnLabel('REF NO')),
         SizedBox(width: _orderActionColumnWidth),
       ],
     ),
@@ -259,6 +260,19 @@ class _OrderListRow extends StatelessWidget {
               ),
             ),
           ),
+          Expanded(
+            flex: _orderRefNoColumnFlex,
+            child: Text(
+              order.refNo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: GlobalColors.primaryText,
+                fontSize: isMobile ? 13 : 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           const SizedBox(
             width: _orderActionColumnWidth,
             child: Center(
@@ -317,9 +331,16 @@ class _OrderTypeChip extends StatelessWidget {
 }
 
 class _RunningOrder {
-  const _RunningOrder(this.billId, this.type, this.confirmed, this.isCompleted);
+  const _RunningOrder(
+    this.billId,
+    this.type,
+    this.refNo,
+    this.confirmed,
+    this.isCompleted,
+  );
   final String billId;
   final String type;
+  final String refNo;
   final ConfirmedOrder? confirmed;
   final bool isCompleted;
 }

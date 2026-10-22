@@ -19,7 +19,8 @@ part 'billing_order_table.dart';
 part 'billing_buttons.dart';
 
 const _orderIdColumnFlex = 9;
-const _orderTypeColumnFlex = 10;
+const _orderTypeColumnFlex = 7;
+const _orderRefNoColumnFlex = 5;
 const _orderActionColumnWidth = 24.0;
 
 class BillingPage extends StatefulWidget {
@@ -111,6 +112,7 @@ class _BillingPageState extends State<BillingPage> {
           (order) => _RunningOrder(
             order.billId,
             order.type,
+            order.refNo,
             order,
             orderStore.isCompleted(order.billId),
           ),

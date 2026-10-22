@@ -22,7 +22,6 @@ class SessionProvider extends ChangeNotifier {
   String? get groupCode => _groupCode;
 
   /// The client ID for the active application session.
-  ///
   /// API services do not have a BuildContext, so they access the same provider
   /// instance through this getter when constructing request URLs.
   static String get currentClientId {
