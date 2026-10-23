@@ -7,6 +7,7 @@ import 'core/session/running_orders_store.dart';
 import 'functions/orders/data/order_database.dart';
 import 'functions/orders/data/order_repository.dart';
 import 'functions/orders/state/order_provider.dart';
+import 'functions/orderdetails/order_details.dart';
 import 'pages/tables/state/table_layout_provider.dart';
 import 'pages/login_page.dart';
 import 'data/api/api_http_client.dart';
@@ -23,7 +24,9 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(
-          create: (_) => OrderProvider(OrderRepository(OrderDatabase())),
+          create: (_) => OrderProvider(
+            OrderRepository(OrderDatabase(), KotService()),
+          ),
         ),
         ChangeNotifierProvider(create: (_) => RunningOrdersStore()),
         ChangeNotifierProvider(create: (_) => TableLayoutProvider()),

@@ -1,9 +1,12 @@
 import '../models/order.dart';
 import 'order_database.dart';
+import '../../orderdetails/order_details.dart';
+import 'package:fudo_v2/core/session/session_provider.dart';
 
 class OrderRepository {
-  OrderRepository(this._database);
+  OrderRepository(this._database, this._kotService);
   final OrderDatabase _database;
+  final KotService _kotService;
 
   /// Creates a readable reference appropriate to the order type.
   /// Table references intentionally use the physical table number.
@@ -46,12 +49,14 @@ class OrderRepository {
     if (order.billNo == null) {
       throw ArgumentError('Bill number is required before saving Tran_Header.');
     }
+    final customerCode = _customerCode();
     final db = await _database.database;
     await db.insert('Tran_Header', {
       'Bill_No': int.parse(order.billNo!),
       'Ref_No': order.refNo,
       'Ref_Type': _refType(order.type),
-      'Counter_No': order.posId,
+      'Counter_No': SessionProvider.currentCounterNo,
+      'Customer_Code': customerCode,
       'Customer_Name': order.customerName,
       'PAX': order.pax ?? 1,
       'Taxable': 0,
@@ -59,11 +64,15 @@ class OrderRepository {
       'Bill_Date': order.createdAt.toIso8601String(),
       'Sales_Date': order.createdAt.toIso8601String(),
       'Bill_Value': order.subtotal,
+      'Print_Count': 0,
+      'Tax_Total': 0,
+      'Service_Charge': 0,
       'Recall_Bill_Flag': order.status == OrderStatus.voided ? 1 : 0,
     });
   }
 
   Future<Order> createOrder(Order order) async {
+    final customerCode = _customerCode();
     final db = await _database.database;
     return db.transaction((tx) async {
       final result = await tx.rawQuery(
@@ -75,7 +84,8 @@ class OrderRepository {
         'Bill_No': int.parse(billNo),
         'Ref_No': saved.refNo,
         'Ref_Type': _refType(saved.type),
-        'Counter_No': saved.posId,
+        'Counter_No': SessionProvider.currentCounterNo,
+        'Customer_Code': customerCode,
         'Customer_Name': saved.customerName,
         'PAX': saved.pax ?? 1,
         'Taxable': 0,
@@ -84,9 +94,13 @@ class OrderRepository {
         'Bill_Date': saved.createdAt.toIso8601String(),
         'Sales_Date': saved.createdAt.toIso8601String(),
         'Bill_Value': saved.subtotal,
+        'Print_Count': 0,
+        'Tax_Total': 0,
+        'Service_Charge': 0,
         'Recall_Bill_Flag': 0,
         'SC_Included': 0,
       });
+      await _kotService.saveOrderLines(transaction: tx, order: saved);
       return saved;
     });
   }
@@ -124,7 +138,7 @@ class OrderRepository {
     'Delivery' => 'DL',
     'Table' => 'TO',
     'Take Away' => 'TA',
-    'Dine In' => 'DI',
+    'Dine In' => 'QS',
     _ => 'OR',
   };
 
@@ -132,9 +146,12 @@ class OrderRepository {
     'DL' => 'Delivery',
     'TB' => 'Table',
     'TA' => 'Take Away',
-    'DI' => 'Dine In',
+    'QS' => 'Dine In',
     _ => 'Order',
   };
+
+  /// Customer codes are scoped to the configured outlet location.
+  String _customerCode() => 'C${SessionProvider.currentLocationId}1';
 
   Order _fromHeader(Map<String, Object?> row) => Order(
     refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}',

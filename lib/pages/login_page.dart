@@ -101,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // Create session
 
-      context.read<SessionProvider>().setSession(
+      await context.read<SessionProvider>().setSession(
         clientId: clientId,
         clientName: clientName,
         clientType: clientType,

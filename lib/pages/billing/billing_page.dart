@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:fudo_v2/core/access_control_service.dart';
+import 'package:fudo_v2/functions/uservalidation/access_control_service.dart';
 import 'package:fudo_v2/core/session/running_orders_store.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/pages/delivery/delivery_page.dart';
 import 'package:fudo_v2/pages/dinein/dinein_page.dart';
 import 'package:fudo_v2/pages/tables/presentation/table_page.dart';
-import 'package:fudo_v2/core/utils/app_functions.dart';
+import 'package:fudo_v2/functions/uservalidation/app_functions.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/authorization.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';

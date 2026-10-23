@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
@@ -110,7 +111,7 @@ class CustomerContact {
     if (existing != null) return existing;
     await _ensureAdditionalInfoColumns(database);
     await database.insert('Customer_Master', {
-      'Customer_Code': 'LOCAL-${DateTime.now().microsecondsSinceEpoch}',
+      'Customer_Code': 'C${SessionProvider.currentLocationId}1',
       'Customer_Name': name,
       'Customer_Address': address,
       'Customer_Area': area,

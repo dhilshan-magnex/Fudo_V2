@@ -1,4 +1,4 @@
-import '../data/database/db_manager.dart';
+import '../../data/database/db_manager.dart';
 
 class AccessControlService {
   AccessControlService._();

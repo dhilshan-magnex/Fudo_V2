@@ -64,6 +64,9 @@ class DBManager {
 
     try {
       final database = await openingDatabase;
+      if (dbType == AppDatabase.sys) {
+        await _ensureDefaultCounter(database);
+      }
       _databases[dbType] = database;
       return database;
     } finally {
@@ -78,6 +81,20 @@ class DBManager {
     if (rows.isEmpty) return null;
 
     return rows.first;
+  }
+
+  /// Returns the configured location for the POS counter currently in use.
+  static Future<Map<String, dynamic>?> getCounterInfo({
+    String counterNo = '01',
+  }) async {
+    final database = await getDatabase(AppDatabase.sys);
+    final rows = await database.query(
+      'Counter_Info',
+      where: 'Counter_No = ?',
+      whereArgs: [counterNo],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first;
   }
 
   static Future<Map<String, dynamic>?> getUserForLogin(
@@ -153,6 +170,19 @@ class DBManager {
 
     await File(databasePath).writeAsBytes(bytes, flush: true);
   }
+
+  /// Ensures the starter counter is also present in an already-copied Sys.db.
+  /// Asset changes alone do not update a database that was created on a
+  /// previous app launch.
+  static Future<void> _ensureDefaultCounter(Database database) => database.insert(
+    'Counter_Info',
+    {
+      'Counter_No': '01',
+      'Location_ID': '002',
+      'POS_ID': 'POS-001',
+    },
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
 
   static Future<bool> _databaseHasColumns(
     String databasePath,
