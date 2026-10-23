@@ -64,9 +64,6 @@ class DBManager {
 
     try {
       final database = await openingDatabase;
-      if (dbType == AppDatabase.sys) {
-        await _ensureDefaultCounter(database);
-      }
       _databases[dbType] = database;
       return database;
     } finally {
@@ -170,19 +167,6 @@ class DBManager {
 
     await File(databasePath).writeAsBytes(bytes, flush: true);
   }
-
-  /// Ensures the starter counter is also present in an already-copied Sys.db.
-  /// Asset changes alone do not update a database that was created on a
-  /// previous app launch.
-  static Future<void> _ensureDefaultCounter(Database database) => database.insert(
-    'Counter_Info',
-    {
-      'Counter_No': '01',
-      'Location_ID': '002',
-      'POS_ID': 'POS-001',
-    },
-    conflictAlgorithm: ConflictAlgorithm.replace,
-  );
 
   static Future<bool> _databaseHasColumns(
     String databasePath,
