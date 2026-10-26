@@ -1,12 +1,14 @@
 import '../models/order.dart';
 import 'order_database.dart';
 import '../../orderdetails/order_details.dart';
+import '../../dayend/day_end_serial_service.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 
 class OrderRepository {
   OrderRepository(this._database, this._kotService);
   final OrderDatabase _database;
   final KotService _kotService;
+  final DayEndSerialService _dayEndSerialService = DayEndSerialService();
 
   /// Creates a readable reference appropriate to the order type.
   /// Table references intentionally use the physical table number.
@@ -73,6 +75,14 @@ class OrderRepository {
 
   Future<Order> createOrder(Order order) async {
     final customerCode = _customerCode();
+    final salesDate = await _dayEndSerialService.addSalesDate(
+      currentDate: order.createdAt,
+    );
+    if (salesDate == null) {
+      throw StateError(
+        'Cannot place an order: no sales date exists in Day_End_Serial.',
+      );
+    }
     final db = await _database.database;
     return db.transaction((tx) async {
       final result = await tx.rawQuery(
@@ -92,7 +102,7 @@ class OrderRepository {
         'Header_Ref': null,
         'Header_Ref1': saved.orderNote,
         'Bill_Date': saved.createdAt.toIso8601String(),
-        'Sales_Date': saved.createdAt.toIso8601String(),
+        'Sales_Date': salesDate,
         'Bill_Value': saved.subtotal,
         'Print_Count': 0,
         'Tax_Total': 0,
@@ -100,7 +110,11 @@ class OrderRepository {
         'Recall_Bill_Flag': 0,
         'SC_Included': 0,
       });
-      await _kotService.saveOrderLines(transaction: tx, order: saved);
+      await _kotService.saveOrderLines(
+        transaction: tx,
+        order: saved,
+        salesDate: salesDate,
+      );
       return saved;
     });
   }
