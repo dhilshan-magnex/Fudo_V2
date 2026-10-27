@@ -12,18 +12,19 @@ class KotService {
   }) async {
     final kotNo = await _next(transaction, salesDate);
     final timestamp = order.createdAt.toIso8601String();
+    var nextLineNo = 1;
 
-    for (var index = 0; index < order.items.length; index++) {
-      final item = order.items[index];
-      await transaction.insert('Tran_Detail', {
+    for (final item in order.items) {
+      final lineNo = nextLineNo++;
+      final note = item.note.trim();
+      final lineValues = <String, Object?>{
         'Bill_No': int.parse(order.billNo!),
-        'Line_No': index + 1,
+        'Line_No': lineNo,
         'Counter_No': SessionProvider.currentCounterNo,
         'Bill_Date': timestamp,
         'Tran_Time': timestamp,
         'KOT_No': kotNo,
         'Waiter_Code': order.waiterName,
-        'Tran_Ref': item.note,
         'Tran_Type': order.type,
         'Ref_No': order.refNo,
         'Ref_Type': _refType(order.type),
@@ -33,7 +34,25 @@ class KotService {
         'Unit_Price': item.unitPrice,
         'Tran_Amount': item.subtotal,
         'Sales_Date': salesDate,
+      };
+
+      await transaction.insert('Tran_Detail', {
+        ...lineValues,
+        'Child_Line_No': 0,
       });
+
+      if (note.isNotEmpty) {
+        await transaction.insert('Tran_Detail', {
+          ...lineValues,
+          'Line_No': nextLineNo++,
+          // Links this note row back to the item row for KOT printing.
+          'Child_Line_No': lineNo,
+          'Tran_Description': note,
+          'Tran_Qty': 0,
+          'Unit_Price': 0,
+          'Tran_Amount': 0,
+        });
+      }
     }
     return kotNo;
   }
@@ -56,11 +75,6 @@ class KotService {
     );
     return (rows.single['last_kot_no'] as num?)?.toInt() ?? 0;
   }
-
-  String _salesDateKey(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
 
   String _refType(String type) => switch (type) {
     'Delivery' => 'DL',
