@@ -12,11 +12,21 @@ class KotService {
   }) async {
     final kotNo = await _next(transaction, salesDate);
     final timestamp = order.createdAt.toIso8601String();
-    var nextLineNo = 1;
+    final menuCategories = <String, Map<String, Object?>>{};
+    var nextLineNo = await _nextLineNo(
+      transaction,
+      int.parse(order.billNo!),
+      SessionProvider.currentCounterNo,
+    );
 
     for (final item in order.items) {
       final lineNo = nextLineNo++;
       final note = item.note.trim();
+      final category = await _menuCategory(
+        transaction,
+        item.id,
+        menuCategories,
+      );
       final lineValues = <String, Object?>{
         'Bill_No': int.parse(order.billNo!),
         'Line_No': lineNo,
@@ -25,11 +35,14 @@ class KotService {
         'Tran_Time': timestamp,
         'KOT_No': kotNo,
         'Waiter_Code': order.waiterName,
-        'Tran_Type': order.type,
+        'Tran_Type': _tranType(order.type),
         'Ref_No': order.refNo,
         'Ref_Type': _refType(order.type),
         'Menu_ID': item.id,
         'Tran_Description': item.name,
+        'Cat_Code': category?['Cat_Code'],
+        'Cat_Lvl2_Code': category?['Cat_Lv2_Code'],
+        'Cat_Type': category?['Cat_Type'],
         'Tran_Qty': item.quantity,
         'Unit_Price': item.unitPrice,
         'Tran_Amount': item.subtotal,
@@ -57,8 +70,53 @@ class KotService {
     return kotNo;
   }
 
+  Future<Map<String, Object?>?> _menuCategory(
+    DatabaseExecutor transaction,
+    String menuId,
+    Map<String, Map<String, Object?>> cache,
+  ) async {
+    final cachedCategory = cache[menuId];
+    if (cachedCategory != null) return cachedCategory;
+
+    final rows = await transaction.rawQuery(
+      '''
+        SELECT
+          menu.Cat_Code,
+          menu.Cat_Lv2_Code,
+          category.Cat_Type
+        FROM Menu_Items AS menu
+        LEFT JOIN Category_Lvl1 AS category
+          ON category.Cat_Code = menu.Cat_Code
+        WHERE menu.Menu_ID = ?
+        LIMIT 1
+      ''',
+      [menuId],
+    );
+    if (rows.isEmpty) return null;
+
+    final category = Map<String, Object?>.from(rows.single);
+    cache[menuId] = category;
+    return category;
+  }
+
   Future<int> _next(DatabaseExecutor transaction, String salesDate) async {
     return (await _lastExistingKotNo(transaction, salesDate)) + 1;
+  }
+
+  Future<int> _nextLineNo(
+    DatabaseExecutor transaction,
+    int billNo,
+    String counterNo,
+  ) async {
+    final rows = await transaction.rawQuery(
+      '''
+        SELECT COALESCE(MAX(Line_No), 0) + 1 AS next_line_no
+        FROM Tran_Detail
+        WHERE Bill_No = ? AND Counter_No = ?
+      ''',
+      [billNo, counterNo],
+    );
+    return (rows.single['next_line_no'] as num).toInt();
   }
 
   Future<int> _lastExistingKotNo(
@@ -82,5 +140,13 @@ class KotService {
     'Take Away' => 'TA',
     'Dine In' => 'QS',
     _ => 'OR',
+  };
+
+  String _tranType(String type) => switch (type.trim().toLowerCase()) {
+    'void' || 'voided' => 'TV',
+    'comment' || 'comments' => 'TM',
+    'cancel' || 'cancelled' || 'canceled' => 'XX',
+    'return' || 'returned' => 'TR',
+    _ => 'TS',
   };
 }

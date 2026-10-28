@@ -23,21 +23,9 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 
   String _message = 'Do you want to synchronize categories now?';
 
-  String _syncFailureMessage(Object error) {
-    final text = error.toString().toLowerCase();
-    final isHostLookupFailure =
-        text.contains('failed host lookup') ||
-        text.contains('no address associated with hostname') ||
-        text.contains('failed to lookup') ||
-        text.contains('socketexception');
+  static const _syncErrorCode = 'SYNC-001';
 
-    if (isHostLookupFailure) {
-      return 'Unable to reach the sync server.\n\n'
-          'Please check your internet connection or the server host configuration.';
-    }
-
-    return 'Data synchronization failed.\n\n$error';
-  }
+  String _syncFailureMessage() => 'Error code: $_syncErrorCode';
 
   Future<void> _showPermissionDeniedDialog() {
     return showDialog<void>(
@@ -137,7 +125,7 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
             'Tax Groups: ${result.taxGroups.savedCount}\n'
             'Tax Master: ${result.taxMaster.savedCount}';
       });
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -147,7 +135,7 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
         _syncComplete = false;
         _progress = 0;
 
-        _message = _syncFailureMessage(error);
+        _message = _syncFailureMessage();
       });
     }
   }

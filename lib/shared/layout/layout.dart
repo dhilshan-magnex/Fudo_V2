@@ -66,20 +66,27 @@ class HomeLayout extends StatelessWidget {
           platform: Theme.of(context).platform,
         );
 
-        return switch (layoutType) {
-          AppLayoutType.mobile => MobileLayout(
-            primaryContent: primaryContent,
-            sideContent: sideContent,
-          ),
-          AppLayoutType.tablet => TabletLayout(
-            primaryContent: primaryContent,
-            sideContent: sideContent,
-          ),
-          AppLayoutType.desktop => DesktopLayout(
-            primaryContent: primaryContent,
-            sideContent: sideContent,
-          ),
-        };
+        // A page can be hosted by a box layout in one mode and by a sliver
+        // layout in another. Give each mode its own subtree so Flutter never
+        // tries to reparent inherited-widget dependents while resizing or
+        // rotating the device.
+        return KeyedSubtree(
+          key: ValueKey(layoutType),
+          child: switch (layoutType) {
+            AppLayoutType.mobile => MobileLayout(
+              primaryContent: primaryContent,
+              sideContent: sideContent,
+            ),
+            AppLayoutType.tablet => TabletLayout(
+              primaryContent: primaryContent,
+              sideContent: sideContent,
+            ),
+            AppLayoutType.desktop => DesktopLayout(
+              primaryContent: primaryContent,
+              sideContent: sideContent,
+            ),
+          },
+        );
       },
     );
   }

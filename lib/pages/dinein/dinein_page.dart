@@ -20,7 +20,10 @@ import 'package:fudo_v2/shared/widgets/contact_form.dart';
 part 'dinein_header.dart';
 part 'dinein_searchbar.dart';
 part 'dinein_menu.dart';
-part 'dinein_add_to_cart.dart';
+part 'addtocart/dinein_cart_bottom_sheet.dart';
+part 'addtocart/dinein_cart_panel.dart';
+part 'addtocart/dinein_customer_dialog.dart';
+part 'addtocart/dinein_cart_models.dart';
 part 'dinein_add_note.dart';
 
 class DineInPage extends StatefulWidget {
@@ -59,11 +62,11 @@ class _DineInPageState extends State<DineInPage> {
   late Future<_DineInData> _menuFuture;
   final _searchController = TextEditingController();
   final _menuScrollController = ScrollController();
-  final Map<String, GlobalKey> _categoryKeys = {};
   String? _categoryCode;
   String _query = '';
   final Map<String, _CartLine> _cart = {};
   bool _isLeavingPage = false;
+  bool _editingExistingItems = false;
   bool _isCollectingInitialCustomer = false;
   CustomerContact? _customer;
 
@@ -137,17 +140,6 @@ class _DineInPageState extends State<DineInPage> {
       }
       return;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final targetContext = _categoryKeys[code]?.currentContext;
-      if (targetContext != null) {
-        Scrollable.ensureVisible(
-          targetContext,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOut,
-          alignment: 0.05,
-        );
-      }
-    });
   }
 
   Future<_DineInData> _loadMenu() async {
@@ -193,6 +185,13 @@ class _DineInPageState extends State<DineInPage> {
   void _addToCart(DineInMenuItem item) {
     setState(() {
       final line = _cart[item.id];
+      // Existing bill lines are read-only while reopening an order. Only
+      // entirely new menu items may be added from this screen.
+      if (widget.orderToUpdate != null &&
+          line != null &&
+          line.existingQuantity > 0) {
+        return;
+      }
       final updatedLine = _CartLine(
         item,
         (line?.quantity ?? 0) + 1,
@@ -230,7 +229,38 @@ class _DineInPageState extends State<DineInPage> {
   }
 
   Future<void> _confirmOrder() async {
-    if (!_hasPendingItems) return;
+    // Quantity edits on an existing order are not new order lines. Persist
+    // them before calculating the lines that still need to be added below.
+    // Without this step, the final "Confirm order" action could close the
+    // order without saving a quantity edit (or save the difference as a new
+    // line instead).
+    final changedExistingLines = _cart.values
+        .where(
+          (line) =>
+              line.existingQuantity > 0 &&
+              line.quantity != line.existingQuantity,
+        )
+        .toList();
+    for (final line in changedExistingLines) {
+      if (!await _confirmExistingQuantity(line)) return;
+      if (!mounted) return;
+      setState(() {
+        _cart[line.item.id] = _CartLine(
+          line.item,
+          line.quantity,
+          note: line.note,
+          existingQuantity: line.quantity,
+        );
+      });
+    }
+
+    if (!_hasPendingItems) {
+      if (widget.orderToUpdate != null) {
+        setState(() => _isLeavingPage = true);
+        Navigator.of(context).pop(true);
+      }
+      return;
+    }
 
     var customer = _customer;
     if (widget.orderToUpdate == null &&
@@ -258,7 +288,39 @@ class _DineInPageState extends State<DineInPage> {
         .toList();
     final store = context.read<RunningOrdersStore>();
     if (widget.orderToUpdate case final order?) {
-      store.addItems(order.billId, items);
+      try {
+        await context.read<OrderProvider>().addItemsToOrder(
+          billNo: order.billId,
+          refNo: order.refNo,
+          type: order.type,
+          items: items
+              .map(
+                (item) => OrderItem(
+                  id: item.id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  note: item.note,
+                ),
+              )
+              .toList(),
+          tableNumber: order.tableNumber,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          deliveryAddress: order.deliveryAddress,
+          deliveryArea: order.deliveryArea,
+          orderNote: order.orderNote,
+          waiterName: order.waiterName,
+          pax: order.pax,
+        );
+        store.addItems(order.billId, items);
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error code: ORDER-001')),
+        );
+        return;
+      }
     } else {
       try {
         final savedOrder = await context.read<OrderProvider>().createOrder(
@@ -299,10 +361,10 @@ class _DineInPageState extends State<DineInPage> {
           waiterName: widget.waiterName,
           pax: savedOrder.pax,
         );
-      } catch (error) {
+      } catch (_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save the order: $error')),
+          const SnackBar(content: Text('Error code: ORDER-002')),
         );
         return;
       }
@@ -318,9 +380,118 @@ class _DineInPageState extends State<DineInPage> {
     _confirmOrder,
     widget.orderToUpdate == null ? 'Confirm order' : 'Add items to order',
     _editItemNote,
-    () => _hasPendingItems,
+    () => _hasPendingItems || widget.orderToUpdate != null,
     widget.orderToUpdate != null,
+    _editingExistingItems,
+    () => setState(() => _editingExistingItems = true),
+    _confirmExistingQuantity,
   );
+
+  Future<bool> _confirmExistingQuantity(_CartLine line) async {
+    final order = widget.orderToUpdate;
+    if (order == null) return false;
+    final reason = await _quantityChangeReason();
+    if (reason == null) return false;
+    try {
+      await context.read<OrderProvider>().updateOrderItemQuantity(
+        billNo: order.billId,
+        menuId: line.item.id,
+        quantity: line.quantity,
+        reason: reason,
+      );
+      context.read<RunningOrdersStore>().updateItemQuantity(
+        order.billId,
+        line.item.id,
+        line.quantity,
+      );
+      if (mounted) setState(() => _editingExistingItems = false);
+      return true;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error code: ORDER-003')),
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<String?> _quantityChangeReason() async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF153C3F),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.edit_note_rounded, color: Color(0xFFF2D6A2)),
+                      SizedBox(width: 12),
+                      Text('Reason for quantity change',
+                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: controller,
+                    autofocus: false,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Enter the reason',
+                      hintStyle: TextStyle(color: Color(0xFFB8C7C8)),
+                      filled: true,
+                      fillColor: Color(0x1FFFFFFF),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(children: [
+                    Expanded(child: OutlinedButton(
+                      onPressed: () => Navigator.of(
+                        dialogContext,
+                        rootNavigator: true,
+                      ).pop(),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                      child: const Text('Cancel'),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: ElevatedButton(
+                      onPressed: () {
+                        final enteredReason = controller.text.trim();
+                        if (enteredReason.isEmpty) return;
+                        Navigator.of(
+                          dialogContext,
+                          rootNavigator: true,
+                        ).pop(enteredReason);
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: GlobalColors.buttonBackground, foregroundColor: Colors.white),
+                      child: const Text('Confirm'),
+                    )),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+      ),
+    );
+    controller.dispose();
+    return reason;
+  }
 
   Future<void> _showPendingOrderMessage() async {
     if (!mounted) return;
@@ -464,8 +635,13 @@ class _DineInPageState extends State<DineInPage> {
               updatePage: setState,
               onConfirm: _confirmOrder,
               onEditNote: _editItemNote,
-              canConfirm: _hasPendingItems,
+              canConfirm: () =>
+                  _hasPendingItems || widget.orderToUpdate != null,
               showNewItemHighlight: widget.orderToUpdate != null,
+              canEditExistingItems: _editingExistingItems,
+              onEnableExistingItemEdits: () =>
+                  setState(() => _editingExistingItems = true),
+              onConfirmExistingQuantity: _confirmExistingQuantity,
               confirmLabel: widget.orderToUpdate == null
                   ? 'Confirm order'
                   : 'Add items to order',
@@ -496,7 +672,6 @@ class _DineInPageState extends State<DineInPage> {
                 onCategoryChanged: _jumpToCategory,
                 onRefresh: _refresh,
                 scrollController: _menuScrollController,
-                categoryKeys: _categoryKeys,
                 onAddToCart: _addToCart,
               );
             },

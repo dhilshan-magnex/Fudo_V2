@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import '../api/applicense_api.dart';
 import '../api/category_api.dart';
 import '../api/catlvl_api.dart';
@@ -378,8 +380,14 @@ class ApiRouteRegistry {
         taxGroups: taxGroupResult,
         taxMaster: taxMasterResult,
       );
-    } catch (error) {
-      throw Exception('Data synchronization failed: $error');
+    } catch (error, stackTrace) {
+      developer.log(
+        'Data synchronization failed. Error code: SYNC-001',
+        name: 'fudo_v2.data_sync',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      Error.throwWithStackTrace(Exception('SYNC-001'), stackTrace);
     }
   }
 }

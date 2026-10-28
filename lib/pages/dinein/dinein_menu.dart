@@ -9,7 +9,6 @@ class _MenuContent extends StatelessWidget {
     required this.onCategoryChanged,
     required this.onRefresh,
     required this.scrollController,
-    required this.categoryKeys,
     required this.onAddToCart,
   });
 
@@ -20,7 +19,6 @@ class _MenuContent extends StatelessWidget {
   final ValueChanged<String?> onCategoryChanged;
   final VoidCallback onRefresh;
   final ScrollController scrollController;
-  final Map<String, GlobalKey> categoryKeys;
   final ValueChanged<DineInMenuItem> onAddToCart;
 
   @override
@@ -32,7 +30,7 @@ class _MenuContent extends StatelessWidget {
         showCategorySections: true,
         shrinkWrap: !constraints.maxHeight.isFinite,
         scrollController: scrollController,
-        categoryKeys: categoryKeys,
+        selectedCategory: selectedCategory,
         onAddToCart: onAddToCart,
       );
       final controls = <Widget>[
@@ -68,7 +66,7 @@ class _MenuGrid extends StatelessWidget {
     required this.showCategorySections,
     required this.shrinkWrap,
     required this.scrollController,
-    required this.categoryKeys,
+    required this.selectedCategory,
     required this.onAddToCart,
   });
   final List<DineInMenuItem> items;
@@ -76,7 +74,7 @@ class _MenuGrid extends StatelessWidget {
   final bool showCategorySections;
   final bool shrinkWrap;
   final ScrollController scrollController;
-  final Map<String, GlobalKey> categoryKeys;
+  final String? selectedCategory;
   final ValueChanged<DineInMenuItem> onAddToCart;
 
   @override
@@ -90,14 +88,13 @@ class _MenuGrid extends StatelessWidget {
             ? _CategoryMenuColumn(
                 groups: groups,
                 columns: columns,
-                categoryKeys: categoryKeys,
                 onAddToCart: onAddToCart,
               )
             : _CategoryMenuList(
                 groups: groups,
                 columns: columns,
                 controller: scrollController,
-                categoryKeys: categoryKeys,
+                selectedCategory: selectedCategory,
                 onAddToCart: onAddToCart,
               );
       }
@@ -130,6 +127,9 @@ class _MenuGrid extends StatelessWidget {
     final groups = <_MenuCategoryGroup>[];
     final handledCodes = <String>{};
     for (final category in categories) {
+      // The API can contain repeated category rows. Rendering both would use
+      // the same cached heading key twice in this widget tree.
+      if (handledCodes.contains(category.code)) continue;
       final categoryItems = items
           .where((item) => item.categoryCode == category.code)
           .toList();
@@ -155,13 +155,13 @@ class _CategoryMenuList extends StatelessWidget {
     required this.groups,
     required this.columns,
     required this.controller,
-    required this.categoryKeys,
+    required this.selectedCategory,
     required this.onAddToCart,
   });
   final List<_MenuCategoryGroup> groups;
   final int columns;
   final ScrollController controller;
-  final Map<String, GlobalKey> categoryKeys;
+  final String? selectedCategory;
   final ValueChanged<DineInMenuItem> onAddToCart;
 
   @override
@@ -171,8 +171,8 @@ class _CategoryMenuList extends StatelessWidget {
       for (final group in groups) ...[
         SliverToBoxAdapter(
           child: _CategoryHeading(
-            key: categoryKeys.putIfAbsent(group.code, () => GlobalKey()),
             name: group.name,
+            scrollToSelected: selectedCategory == group.code,
           ),
         ),
         SliverPadding(
@@ -200,12 +200,10 @@ class _CategoryMenuColumn extends StatelessWidget {
   const _CategoryMenuColumn({
     required this.groups,
     required this.columns,
-    required this.categoryKeys,
     required this.onAddToCart,
   });
   final List<_MenuCategoryGroup> groups;
   final int columns;
-  final Map<String, GlobalKey> categoryKeys;
   final ValueChanged<DineInMenuItem> onAddToCart;
 
   @override
@@ -213,10 +211,7 @@ class _CategoryMenuColumn extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       for (final group in groups) ...[
-        _CategoryHeading(
-          key: categoryKeys.putIfAbsent(group.code, () => GlobalKey()),
-          name: group.name,
-        ),
+        _CategoryHeading(name: group.name),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -236,15 +231,48 @@ class _CategoryMenuColumn extends StatelessWidget {
   );
 }
 
-class _CategoryHeading extends StatelessWidget {
-  const _CategoryHeading({super.key, required this.name});
+class _CategoryHeading extends StatefulWidget {
+  const _CategoryHeading({required this.name, this.scrollToSelected = false});
   final String name;
+  final bool scrollToSelected;
+
+  @override
+  State<_CategoryHeading> createState() => _CategoryHeadingState();
+}
+
+class _CategoryHeadingState extends State<_CategoryHeading> {
+  @override
+  void initState() {
+    super.initState();
+    _scrollIntoViewIfSelected();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CategoryHeading oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.scrollToSelected && widget.scrollToSelected) {
+      _scrollIntoViewIfSelected();
+    }
+  }
+
+  void _scrollIntoViewIfSelected() {
+    if (!widget.scrollToSelected) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.scrollToSelected) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+        alignment: 0.05,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: Text(
-      name,
+      widget.name,
       style: const TextStyle(
         color: GlobalColors.primaryText,
         fontSize: 18,

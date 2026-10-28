@@ -127,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
 
       setState(() {
@@ -135,8 +135,8 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: $e'),
+        const SnackBar(
+          content: Text('Error code: LOGIN-001'),
           backgroundColor: Colors.red,
         ),
       );

@@ -119,6 +119,152 @@ class OrderRepository {
     });
   }
 
+  /// Saves additional items to an existing bill and updates its total.
+  Future<void> addItemsToOrder(Order order) async {
+    if (order.billNo == null) {
+      throw ArgumentError('Bill number is required before adding items.');
+    }
+    if (order.items.isEmpty) {
+      throw ArgumentError('At least one item must be added to an order.');
+    }
+
+    final db = await _database.database;
+    await db.transaction((tx) async {
+      final headerRows = await tx.query(
+        'Tran_Header',
+        columns: const ['Sales_Date'],
+        where: 'Bill_No = ?',
+        whereArgs: [int.parse(order.billNo!)],
+        limit: 1,
+      );
+      if (headerRows.isEmpty) {
+        throw StateError('Bill ${order.billNo} was not found.');
+      }
+
+      final salesDate = headerRows.single['Sales_Date'] as String?;
+      if (salesDate == null || salesDate.isEmpty) {
+        throw StateError('Bill ${order.billNo} has no sales date.');
+      }
+
+      await _kotService.saveOrderLines(
+        transaction: tx,
+        order: order,
+        salesDate: salesDate,
+      );
+      await tx.rawUpdate(
+        '''
+          UPDATE Tran_Header
+          SET Bill_Value = COALESCE(Bill_Value, 0) + ?
+          WHERE Bill_No = ?
+        ''',
+        [order.subtotal, int.parse(order.billNo!)],
+      );
+    });
+  }
+
+  Future<void> updateOrderItemQuantity({
+    required String billNo,
+    required String menuId,
+    required int quantity,
+    required String reason,
+  }) async {
+    if (quantity < 1) {
+      throw ArgumentError.value(quantity, 'quantity', 'must be at least 1');
+    }
+
+    final db = await _database.database;
+    await db.transaction((tx) async {
+      final detailRows = await tx.query(
+        'Tran_Detail',
+        where: 'Bill_No = ? AND Menu_ID = ? AND Child_Line_No = 0',
+        whereArgs: [int.parse(billNo), menuId],
+        orderBy: 'Line_No ASC',
+      );
+      if (detailRows.isEmpty) {
+        throw StateError('Item $menuId was not found on bill $billNo.');
+      }
+
+      // A void is kept as its own transaction line with a negative amount.
+      // This preserves the original sale and makes reductions auditable.
+      final currentQuantity = detailRows.fold<int>(
+        0,
+        (total, row) {
+          final lineQuantity = (row['Tran_Qty'] as num).toInt().abs();
+          return row['Tran_Type'] == 'TV'
+              ? total - lineQuantity
+              : total + lineQuantity;
+        },
+      );
+      final saleLine = detailRows.lastWhere(
+        (row) => row['Tran_Type'] != 'TV',
+        orElse: () => throw StateError(
+          'No sale line was found for item $menuId on bill $billNo.',
+        ),
+      );
+
+      if (quantity < currentQuantity) {
+        final voidQuantity = currentQuantity - quantity;
+        final nextLineRows = await tx.rawQuery(
+          '''
+            SELECT COALESCE(MAX(Line_No), 0) + 1 AS next_line_no
+            FROM Tran_Detail
+            WHERE Bill_No = ? AND Counter_No = ?
+          ''',
+          [int.parse(billNo), SessionProvider.currentCounterNo],
+        );
+        final voidLine = Map<String, Object?>.from(saleLine)
+          ..['Line_No'] = (nextLineRows.single['next_line_no'] as num).toInt()
+          ..['Child_Line_No'] = 0
+          // Keep the order reference type (for example, QS for Dine In).
+          // The transaction type, rather than the reference type, marks this
+          // detail row as a void.
+          ..['Tran_Type'] = 'TV'
+          // Store the number of voided items as a positive quantity. The
+          // negative amount applies the reduction to the bill total.
+          ..['Tran_Qty'] = voidQuantity
+          ..['Tran_Amount'] =
+              -((saleLine['Unit_Price'] as num).toDouble() * voidQuantity)
+          ..['Tran_Ref'] = reason
+          ..['Bill_Date'] = DateTime.now().toIso8601String()
+          ..['Tran_Time'] = DateTime.now().toIso8601String();
+
+        // `Bill_No` is part of the source line's key and is NOT NULL. It
+        // must remain on the void row. Do not remove columns merely because
+        // they are primary-key columns: this database defines `Bill_No` that
+        // way, rather than using an auto-generated detail-row id.
+        voidLine.remove('id');
+        await tx.insert('Tran_Detail', voidLine);
+      } else if (quantity > currentQuantity) {
+        final additionalQuantity = quantity - currentQuantity;
+        final saleQuantity = (saleLine['Tran_Qty'] as num).toInt();
+        final unitPrice = (saleLine['Unit_Price'] as num).toDouble();
+        await tx.update(
+          'Tran_Detail',
+          {
+            'Tran_Qty': saleQuantity + additionalQuantity,
+            'Tran_Amount': unitPrice * (saleQuantity + additionalQuantity),
+            'Tran_Ref': reason,
+          },
+          where: 'Bill_No = ? AND Line_No = ?',
+          whereArgs: [int.parse(billNo), saleLine['Line_No']],
+        );
+      }
+
+      await tx.rawUpdate(
+        '''
+          UPDATE Tran_Header
+          SET Bill_Value = (
+            SELECT COALESCE(SUM(Tran_Amount), 0)
+            FROM Tran_Detail
+            WHERE Bill_No = Tran_Header.Bill_No AND Child_Line_No = 0
+          )
+          WHERE Bill_No = ?
+        ''',
+        [int.parse(billNo)],
+      );
+    });
+  }
+
   Future<List<Order>> getAll() async {
     final db = await _database.database;
     final rows = await db.query('Tran_Header', orderBy: 'Bill_No DESC');

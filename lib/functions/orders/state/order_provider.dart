@@ -77,6 +77,59 @@ class OrderProvider extends ChangeNotifier {
     return billNo;
   }
 
+  Future<void> addItemsToOrder({
+    required String billNo,
+    required String refNo,
+    required String type,
+    required List<OrderItem> items,
+    String? tableNumber,
+    String? customerName,
+    String? customerPhone,
+    String? deliveryAddress,
+    String? deliveryArea,
+    String? orderNote,
+    String? waiterName,
+    int? pax,
+  }) async {
+    await _repository.addItemsToOrder(
+      Order(
+        billNo: billNo,
+        refNo: refNo,
+        type: type,
+        items: List.unmodifiable(items),
+        status: OrderStatus.open,
+        createdAt: DateTime.now(),
+        posId: '',
+        tableNumber: tableNumber,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        deliveryAddress: deliveryAddress,
+        deliveryArea: deliveryArea,
+        orderNote: orderNote,
+        waiterName: waiterName,
+        pax: pax,
+      ),
+    );
+    _orders = await _repository.getAll();
+    notifyListeners();
+  }
+
+  Future<void> updateOrderItemQuantity({
+    required String billNo,
+    required String menuId,
+    required int quantity,
+    required String reason,
+  }) async {
+    await _repository.updateOrderItemQuantity(
+      billNo: billNo,
+      menuId: menuId,
+      quantity: quantity,
+      reason: reason,
+    );
+    _orders = await _repository.getAll();
+    notifyListeners();
+  }
+
   Future<void> deleteOrder(String refNo) async {
     await _repository.delete(refNo);
     _orders = _orders.where((order) => order.refNo != refNo).toList();

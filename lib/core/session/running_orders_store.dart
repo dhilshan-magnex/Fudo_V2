@@ -127,6 +127,48 @@ class RunningOrdersStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateItemQuantity(String billId, String itemId, int quantity) {
+    final activeIndex = _orders.indexWhere((order) => order.billId == billId);
+    final completedIndex = _completedOrders.indexWhere(
+      (order) => order.billId == billId,
+    );
+    if (activeIndex == -1 && completedIndex == -1) {
+      throw StateError('Order $billId was not found.');
+    }
+
+    final order = activeIndex != -1
+        ? _orders.removeAt(activeIndex)
+        : _completedOrders.removeAt(completedIndex);
+    final updatedOrder = ConfirmedOrder(
+      billId: order.billId,
+      refNo: order.refNo,
+      type: order.type,
+      items: List.unmodifiable(
+        order.items.map(
+          (item) => item.id == itemId
+              ? ConfirmedOrderItem(
+                  id: item.id,
+                  name: item.name,
+                  quantity: quantity,
+                  unitPrice: item.unitPrice,
+                  note: item.note,
+                )
+              : item,
+        ),
+      ),
+      tableNumber: order.tableNumber,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      deliveryAddress: order.deliveryAddress,
+      deliveryArea: order.deliveryArea,
+      orderNote: order.orderNote,
+      waiterName: order.waiterName,
+      pax: order.pax,
+    );
+    _orders.insert(0, updatedOrder);
+    notifyListeners();
+  }
+
   void deleteOrder(String billId) {
     final previousLength = _orders.length + _completedOrders.length;
     _orders.removeWhere((order) => order.billId == billId);
