@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +13,6 @@ import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
 import 'package:fudo_v2/shared/widgets/buttons/discard_button.dart';
 import 'package:fudo_v2/shared/widgets/contact_form.dart';
-
-/// Menu browser used when creating an order or adding items to an existing one.
 
 part 'dinein_header.dart';
 part 'dinein_searchbar.dart';
@@ -171,6 +168,7 @@ class _DineInPageState extends State<DineInPage> {
       builder: (_) =>
           _DineInCustomerDialog(initialName: widget.customerName ?? ''),
     );
+    await _settleOverlayTransition();
     if (!mounted) return;
     if (customer == null) {
       Navigator.of(context).maybePop();
@@ -213,6 +211,7 @@ class _DineInPageState extends State<DineInPage> {
       builder: (_) =>
           _ItemNoteDialog(itemName: line.item.name, initialNote: line.note),
     );
+    await _settleOverlayTransition();
     if (note == null || !mounted) return;
 
     setState(() {
@@ -256,6 +255,7 @@ class _DineInPageState extends State<DineInPage> {
 
     if (!_hasPendingItems) {
       if (widget.orderToUpdate != null) {
+        if (!mounted) return;
         setState(() => _isLeavingPage = true);
         Navigator.of(context).pop(true);
       }
@@ -271,6 +271,7 @@ class _DineInPageState extends State<DineInPage> {
         builder: (_) =>
             _DineInCustomerDialog(initialName: widget.customerName ?? ''),
       );
+      await _settleOverlayTransition();
       if (customer == null || !mounted) return;
     }
 
@@ -369,6 +370,7 @@ class _DineInPageState extends State<DineInPage> {
         return;
       }
     }
+    if (!mounted) return;
     setState(() => _isLeavingPage = true);
     Navigator.of(context).pop(true);
   }
@@ -391,15 +393,17 @@ class _DineInPageState extends State<DineInPage> {
     final order = widget.orderToUpdate;
     if (order == null) return false;
     final reason = await _quantityChangeReason();
-    if (reason == null) return false;
+    if (reason == null || !mounted) return false;
+    final orderProvider = context.read<OrderProvider>();
+    final runningOrdersStore = context.read<RunningOrdersStore>();
     try {
-      await context.read<OrderProvider>().updateOrderItemQuantity(
+      await orderProvider.updateOrderItemQuantity(
         billNo: order.billId,
         menuId: line.item.id,
         quantity: line.quantity,
         reason: reason,
       );
-      context.read<RunningOrdersStore>().updateItemQuantity(
+      runningOrdersStore.updateItemQuantity(
         order.billId,
         line.item.id,
         line.quantity,
@@ -489,6 +493,7 @@ class _DineInPageState extends State<DineInPage> {
           ),
       ),
     );
+    await _settleOverlayTransition();
     controller.dispose();
     return reason;
   }
@@ -561,6 +566,8 @@ class _DineInPageState extends State<DineInPage> {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.of(dialogContext).pop();
+                          await _settleOverlayTransition();
+                          if (!mounted) return;
                           await _confirmOrder();
                         },
                         style: ElevatedButton.styleFrom(

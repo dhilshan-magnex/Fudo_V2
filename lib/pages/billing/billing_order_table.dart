@@ -345,13 +345,16 @@ class _RunningOrder {
   final bool isCompleted;
 }
 
-void _showConfirmedOrder(
+Future<void> _showConfirmedOrder(
   BuildContext context,
   ConfirmedOrder order, {
   required bool isCompleted,
-}) {
+}) async {
   final priceFormat = NumberFormat('#,##0.00');
-  showModalBottomSheet<void>(
+  // Do not push the edit page in the same callback that pops this sheet.
+  // The route is still disposing at that point, which can leave inherited
+  // widget dependents attached and result in duplicate GlobalKey errors.
+  final shouldAddItems = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: GlobalColors.homeBackground,
@@ -589,14 +592,8 @@ void _showConfirmedOrder(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    onPressed: () {
-                      Navigator.of(sheetContext).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute<bool>(
-                          builder: (_) => DineInPage(orderToUpdate: order),
-                        ),
-                      );
-                    },
+                      onPressed: () =>
+                          Navigator.of(sheetContext).pop(true),
                     icon: const Icon(Icons.add_shopping_cart_rounded),
                     label: const Text('Add Items'),
                   ),
@@ -608,6 +605,14 @@ void _showConfirmedOrder(
       ),
     ),
   );
+
+  if (shouldAddItems == true && context.mounted) {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => DineInPage(orderToUpdate: order),
+      ),
+    );
+  }
 }
 
 class _OrderSheetInfo extends StatelessWidget {

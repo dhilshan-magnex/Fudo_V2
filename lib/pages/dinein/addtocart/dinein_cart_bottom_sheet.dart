@@ -3,6 +3,25 @@ part of '../dinein_page.dart';
 
 final _cartPriceFormat = NumberFormat('#,##0.00');
 
+enum _DineInCartSheetAction { confirmOrder, confirmExistingQuantity }
+
+class _DineInCartSheetResult {
+  const _DineInCartSheetResult.confirmOrder()
+    : action = _DineInCartSheetAction.confirmOrder,
+      line = null;
+
+  const _DineInCartSheetResult.confirmExistingQuantity(this.line)
+    : action = _DineInCartSheetAction.confirmExistingQuantity;
+
+  final _DineInCartSheetAction action;
+  final _CartLine? line;
+}
+
+Future<void> _settleOverlayTransition() async {
+  await Future<void>.delayed(kThemeAnimationDuration);
+  await WidgetsBinding.instance.endOfFrame;
+}
+
 Future<void> _showDineInCart(
   BuildContext context,
   Map<String, _CartLine> cart,
@@ -17,7 +36,7 @@ Future<void> _showDineInCart(
   Future<bool> Function(_CartLine) onConfirmExistingQuantity,
 ) async {
   var isEditingExistingItems = canEditExistingItems;
-  final shouldConfirm = await showModalBottomSheet<bool>(
+  final result = await showModalBottomSheet<_DineInCartSheetResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: GlobalColors.homeBackground,
@@ -270,19 +289,18 @@ Future<void> _showDineInCart(
                                             IconButton(
                                               tooltip: 'Confirm quantity',
                                               icon: const Icon(Icons.check),
-                                              onPressed: () async {
-                                                if (await onConfirmExistingQuantity(line)) {
-                                                  updatePage(() {
-                                                    cart[line.item.id] = _CartLine(
-                                                      line.item,
-                                                      line.quantity,
-                                                      note: line.note,
-                                                      existingQuantity: line.quantity,
-                                                    );
-                                                  });
-                                                  Navigator.of(context).pop(true);
-                                                }
-                                              },
+                                              // Close this sheet before opening the
+                                              // reason dialog. Stacking a dialog on
+                                              // top of a sheet, then popping the
+                                              // page, can leave both route subtrees
+                                              // active during the same frame.
+                                              onPressed: () => Navigator.of(context)
+                                                  .pop(
+                                                    _DineInCartSheetResult
+                                                        .confirmExistingQuantity(
+                                                          line,
+                                                        ),
+                                                  ),
                                             ),
                                         ],
                                       ),
@@ -348,7 +366,9 @@ Future<void> _showDineInCart(
                       onPressed: !canConfirm()
                           ? null
                           : () async {
-                              Navigator.of(context).pop(true);
+                              Navigator.of(context).pop(
+                                const _DineInCartSheetResult.confirmOrder(),
+                              );
                             },
                       icon: const Icon(Icons.check_rounded),
                       label: Text(confirmLabel),
@@ -368,10 +388,31 @@ Future<void> _showDineInCart(
     ),
   );
 
-  // Wait until the modal route has been removed before allowing the parent
-  // page to pop. Popping both routes in the same frame can dispose inherited
-  // widgets while the sheet still has registered dependents.
-  if (shouldConfirm == true) {
+  if (result == null || !context.mounted) return;
+
+  await _settleOverlayTransition();
+  if (!context.mounted) return;
+
+  if (result.action == _DineInCartSheetAction.confirmExistingQuantity) {
+    final line = result.line!;
+    if (await onConfirmExistingQuantity(line) && context.mounted) {
+      updatePage(() {
+        cart[line.item.id] = _CartLine(
+          line.item,
+          line.quantity,
+          note: line.note,
+          existingQuantity: line.quantity,
+        );
+      });
+      // The quantity update has already been saved. Return to the Billing
+      // route that opened this editor instead of running full order
+      // confirmation again (which could also create/add pending items).
+      if (context.mounted) Navigator.of(context).pop(true);
+    }
+    return;
+  }
+
+  if (result.action == _DineInCartSheetAction.confirmOrder) {
     await onConfirm();
   }
 }
@@ -428,4 +469,3 @@ Future<bool> _confirmVoidAllItems(BuildContext context) async {
       ) ??
       false;
 }
-

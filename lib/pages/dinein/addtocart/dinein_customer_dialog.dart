@@ -79,6 +79,7 @@ class _DineInCustomerDialogState extends State<_DineInCustomerDialog> {
           initialPhone: _phoneController.text.trim(),
         ),
       );
+      await _settleOverlayTransition();
       if (contact == null || !mounted) return;
     }
     if (!mounted) return;
@@ -370,4 +371,3 @@ class _DineInCustomerAction extends StatelessWidget {
     ),
   );
 }
-

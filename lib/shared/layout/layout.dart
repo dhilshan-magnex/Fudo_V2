@@ -8,8 +8,16 @@ enum AppLayoutType {
   tablet,
   desktop;
 
+  /// The display size is stable while Android resizes the app viewport for
+  /// the on-screen keyboard. `MediaQuery.size` is not: its height changes
+  /// while typing, which must not cause a tablet page to be rebuilt as mobile.
+  static Size displaySizeOf(BuildContext context) {
+    final view = View.of(context);
+    return view.physicalSize / view.devicePixelRatio;
+  }
+
   static AppLayoutType fromContext(BuildContext context) {
-    final screenSize = MediaQuery.sizeOf(context);
+    final screenSize = displaySizeOf(context);
     return resolve(
       maxWidth: screenSize.width,
       screenSize: screenSize,
@@ -59,7 +67,7 @@ class HomeLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final screenSize = MediaQuery.sizeOf(context);
+        final screenSize = AppLayoutType.displaySizeOf(context);
         final layoutType = AppLayoutType.resolve(
           maxWidth: constraints.maxWidth,
           screenSize: screenSize,
