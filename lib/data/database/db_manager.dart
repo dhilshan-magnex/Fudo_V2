@@ -128,7 +128,25 @@ class DBManager {
 
     await _copyAssetDatabaseIfMissing(databasePath, config.assetPath);
 
-    return openDatabase(databasePath);
+    final database = await openDatabase(databasePath);
+    await _applySchemaUpdates(dbType, database);
+    return database;
+  }
+
+  /// Applies additive schema updates required by newer app versions.
+  static Future<void> _applySchemaUpdates(
+    AppDatabase dbType,
+    Database database,
+  ) async {
+    if (dbType != AppDatabase.fudo) return;
+
+    final columns = await database.rawQuery('PRAGMA table_info(Tran_Header)');
+    final hasBillTime = columns.any(
+      (column) => column['name']?.toString() == 'Bill_Time',
+    );
+    if (!hasBillTime) {
+      await database.execute('ALTER TABLE Tran_Header ADD COLUMN Bill_Time TEXT');
+    }
   }
 
   static Future<void> _refreshInvalidDatabase(

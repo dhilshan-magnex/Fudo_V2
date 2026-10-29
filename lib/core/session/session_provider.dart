@@ -38,6 +38,15 @@ class SessionProvider extends ChangeNotifier {
     return clientId;
   }
 
+  /// The authenticated user who is operating the current POS session.
+  static String get currentUserId {
+    final userId = _current?._userId?.trim();
+    if (userId == null || userId.isEmpty) {
+      throw StateError('No user ID is available in the current session.');
+    }
+    return userId;
+  }
+
   static String get currentLocationId {
     final locationId = _current?._locationId?.trim();
     if (locationId == null || locationId.isEmpty) {

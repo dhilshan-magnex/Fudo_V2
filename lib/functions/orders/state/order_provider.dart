@@ -77,6 +77,12 @@ class OrderProvider extends ChangeNotifier {
     return billNo;
   }
 
+  Future<void> checkoutOrder(String billNo) async {
+    await _repository.recordCheckout(billNo);
+    _orders = await _repository.getAll();
+    notifyListeners();
+  }
+
   Future<void> addItemsToOrder({
     required String billNo,
     required String refNo,

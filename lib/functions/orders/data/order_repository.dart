@@ -1,17 +1,21 @@
+import 'package:fudo_v2/core/session/session_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../../dayend/day_end_serial_service.dart';
+import '../../orderdetails/order_details.dart';
 import '../models/order.dart';
 import 'order_database.dart';
-import '../../orderdetails/order_details.dart';
-import '../../dayend/day_end_serial_service.dart';
-import 'package:fudo_v2/core/session/session_provider.dart';
+
+const _headerTable = 'Tran_Header';
+const _detailTable = 'Tran_Detail';
+const _voidTransactionType = 'TV';
 
 class OrderRepository {
   OrderRepository(this._database, this._kotService);
   final OrderDatabase _database;
   final KotService _kotService;
-  final DayEndSerialService _dayEndSerialService = DayEndSerialService();
+  final _dayEndSerialService = DayEndSerialService();
 
-  /// Creates a readable reference appropriate to the order type.
-  /// Table references intentionally use the physical table number.
   Future<String> createRefNo({
     required String type,
     String? tableNumber,
@@ -39,12 +43,7 @@ class OrderRepository {
 
   Future<String> nextBillNo() async {
     final db = await _database.database;
-    return db.transaction((tx) async {
-      final result = await tx.rawQuery(
-        'SELECT COALESCE(MAX(Bill_No), 0) + 1 AS next_bill_no FROM Tran_Header',
-      );
-      return (result.single['next_bill_no'] as num).toInt().toString();
-    });
+    return db.transaction(_nextBillNo);
   }
 
   Future<void> save(Order order) async {
@@ -53,24 +52,15 @@ class OrderRepository {
     }
     final customerCode = _customerCode();
     final db = await _database.database;
-    await db.insert('Tran_Header', {
-      'Bill_No': int.parse(order.billNo!),
-      'Ref_No': order.refNo,
-      'Ref_Type': _refType(order.type),
-      'Counter_No': SessionProvider.currentCounterNo,
-      'Customer_Code': customerCode,
-      'Customer_Name': order.customerName,
-      'PAX': order.pax ?? 1,
-      'Taxable': 0,
-      'Header_Ref1': order.orderNote,
-      'Bill_Date': order.createdAt.toIso8601String(),
-      'Sales_Date': order.createdAt.toIso8601String(),
-      'Bill_Value': order.subtotal,
-      'Print_Count': 0,
-      'Tax_Total': 0,
-      'Service_Charge': 0,
-      'Recall_Bill_Flag': order.status == OrderStatus.voided ? 1 : 0,
-    });
+    await db.insert(
+      _headerTable,
+      _headerValues(
+        order,
+        customerCode: customerCode,
+        salesDate: order.createdAt.toIso8601String(),
+        isVoided: order.status == OrderStatus.voided,
+      ),
+    );
   }
 
   Future<Order> createOrder(Order order) async {
@@ -85,31 +75,17 @@ class OrderRepository {
     }
     final db = await _database.database;
     return db.transaction((tx) async {
-      final result = await tx.rawQuery(
-        'SELECT COALESCE(MAX(Bill_No), 0) + 1 AS next_bill_no FROM Tran_Header',
-      );
-      final billNo = (result.single['next_bill_no'] as num).toInt().toString();
+      final billNo = await _nextBillNo(tx);
       final saved = order.copyWith(billNo: billNo);
-      await tx.insert('Tran_Header', {
-        'Bill_No': int.parse(billNo),
-        'Ref_No': saved.refNo,
-        'Ref_Type': _refType(saved.type),
-        'Counter_No': SessionProvider.currentCounterNo,
-        'Customer_Code': customerCode,
-        'Customer_Name': saved.customerName,
-        'PAX': saved.pax ?? 1,
-        'Taxable': 0,
-        'Header_Ref': null,
-        'Header_Ref1': saved.orderNote,
-        'Bill_Date': saved.createdAt.toIso8601String(),
-        'Sales_Date': salesDate,
-        'Bill_Value': saved.subtotal,
-        'Print_Count': 0,
-        'Tax_Total': 0,
-        'Service_Charge': 0,
-        'Recall_Bill_Flag': 0,
-        'SC_Included': 0,
-      });
+      await tx.insert(
+        _headerTable,
+        _headerValues(
+          saved,
+          customerCode: customerCode,
+          salesDate: salesDate,
+          includeServiceChargeFlag: true,
+        ),
+      );
       await _kotService.saveOrderLines(
         transaction: tx,
         order: saved,
@@ -175,7 +151,7 @@ class OrderRepository {
     final db = await _database.database;
     await db.transaction((tx) async {
       final detailRows = await tx.query(
-        'Tran_Detail',
+        _detailTable,
         where: 'Bill_No = ? AND Menu_ID = ? AND Child_Line_No = 0',
         whereArgs: [int.parse(billNo), menuId],
         orderBy: 'Line_No ASC',
@@ -184,62 +160,68 @@ class OrderRepository {
         throw StateError('Item $menuId was not found on bill $billNo.');
       }
 
-      // A void is kept as its own transaction line with a negative amount.
-      // This preserves the original sale and makes reductions auditable.
-      final currentQuantity = detailRows.fold<int>(
-        0,
-        (total, row) {
-          final lineQuantity = (row['Tran_Qty'] as num).toInt().abs();
-          return row['Tran_Type'] == 'TV'
-              ? total - lineQuantity
-              : total + lineQuantity;
-        },
-      );
+
       final saleLine = detailRows.lastWhere(
-        (row) => row['Tran_Type'] != 'TV',
+        (row) => row['Tran_Type'] != _voidTransactionType,
         orElse: () => throw StateError(
           'No sale line was found for item $menuId on bill $billNo.',
         ),
       );
+      // The sale rows store the current ordered quantity. TV rows are an
+      // audit trail, so they must not reduce this value again.
+      final currentQuantity = detailRows
+          .where((row) => row['Tran_Type'] != _voidTransactionType)
+          .fold<int>(
+            0,
+            (total, row) => total + (row['Tran_Qty'] as num).toInt(),
+          );
 
       if (quantity < currentQuantity) {
         final voidQuantity = currentQuantity - quantity;
+        final saleQuantity = (saleLine['Tran_Qty'] as num).toInt();
+        final remainingSaleQuantity = saleQuantity - voidQuantity;
+        final unitPrice = (saleLine['Unit_Price'] as num).toDouble();
+        if (remainingSaleQuantity < 1) {
+          throw StateError('The item quantity cannot be reduced below 1.');
+        }
+
+        await tx.update(
+          _detailTable,
+          {
+            'Tran_Qty': remainingSaleQuantity,
+            'Tran_Amount': unitPrice * remainingSaleQuantity,
+          },
+          where: 'Bill_No = ? AND Line_No = ?',
+          whereArgs: [int.parse(billNo), saleLine['Line_No']],
+        );
+
         final nextLineRows = await tx.rawQuery(
           '''
             SELECT COALESCE(MAX(Line_No), 0) + 1 AS next_line_no
-            FROM Tran_Detail
+            FROM $_detailTable
             WHERE Bill_No = ? AND Counter_No = ?
           ''',
           [int.parse(billNo), SessionProvider.currentCounterNo],
         );
+        final now = DateTime.now();
         final voidLine = Map<String, Object?>.from(saleLine)
           ..['Line_No'] = (nextLineRows.single['next_line_no'] as num).toInt()
           ..['Child_Line_No'] = 0
-          // Keep the order reference type (for example, QS for Dine In).
-          // The transaction type, rather than the reference type, marks this
-          // detail row as a void.
-          ..['Tran_Type'] = 'TV'
-          // Store the number of voided items as a positive quantity. The
-          // negative amount applies the reduction to the bill total.
+          ..['Tran_Type'] = _voidTransactionType
           ..['Tran_Qty'] = voidQuantity
-          ..['Tran_Amount'] =
-              -((saleLine['Unit_Price'] as num).toDouble() * voidQuantity)
+          ..['Unit_Price'] = 0
+          ..['Tran_Amount'] = 0
           ..['Tran_Ref'] = reason
-          ..['Bill_Date'] = DateTime.now().toIso8601String()
-          ..['Tran_Time'] = DateTime.now().toIso8601String();
-
-        // `Bill_No` is part of the source line's key and is NOT NULL. It
-        // must remain on the void row. Do not remove columns merely because
-        // they are primary-key columns: this database defines `Bill_No` that
-        // way, rather than using an auto-generated detail-row id.
-        voidLine.remove('id');
-        await tx.insert('Tran_Detail', voidLine);
+          ..['Bill_Date'] = _dateOnly(now)
+          ..['Tran_Time'] = now.toIso8601String()
+          ..remove('id');
+        await tx.insert(_detailTable, voidLine);
       } else if (quantity > currentQuantity) {
         final additionalQuantity = quantity - currentQuantity;
         final saleQuantity = (saleLine['Tran_Qty'] as num).toInt();
         final unitPrice = (saleLine['Unit_Price'] as num).toDouble();
         await tx.update(
-          'Tran_Detail',
+          _detailTable,
           {
             'Tran_Qty': saleQuantity + additionalQuantity,
             'Tran_Amount': unitPrice * (saleQuantity + additionalQuantity),
@@ -254,7 +236,12 @@ class OrderRepository {
         '''
           UPDATE Tran_Header
           SET Bill_Value = (
-            SELECT COALESCE(SUM(Tran_Amount), 0)
+            SELECT COALESCE(SUM(
+              CASE
+                WHEN Tran_Type = 'TV' THEN 0
+                ELSE Tran_Amount
+              END
+            ), 0)
             FROM Tran_Detail
             WHERE Bill_No = Tran_Header.Bill_No AND Child_Line_No = 0
           )
@@ -294,6 +281,20 @@ class OrderRepository {
     throw StateError('Legacy Tran_Header order $refNo has no Bill_No.');
   }
 
+  /// Records the logged-in cashier on each transaction detail at checkout.
+  Future<void> recordCheckout(String billNo) async {
+    final db = await _database.database;
+    final updatedRows = await db.update(
+      _detailTable,
+      {'Cashier_Code': SessionProvider.currentUserId},
+      where: 'Bill_No = ?',
+      whereArgs: [int.parse(billNo)],
+    );
+    if (updatedRows == 0) {
+      throw StateError('No transaction details were found for bill $billNo.');
+    }
+  }
+
   String _refType(String type) => switch (type) {
     'Delivery' => 'DL',
     'Table' => 'TO',
@@ -304,7 +305,7 @@ class OrderRepository {
 
   String _orderType(String refType) => switch (refType) {
     'DL' => 'Delivery',
-    'TB' => 'Table',
+    'TO' => 'Table',
     'TA' => 'Take Away',
     'QS' => 'Dine In',
     _ => 'Order',
@@ -312,6 +313,52 @@ class OrderRepository {
 
   /// Customer codes are scoped to the configured outlet location.
   String _customerCode() => 'C${SessionProvider.currentLocationId}1';
+
+  Future<String> _nextBillNo(DatabaseExecutor database) async {
+    final result = await database.rawQuery(
+      'SELECT COALESCE(MAX(Bill_No), 0) + 1 AS next_bill_no FROM $_headerTable',
+    );
+    return (result.single['next_bill_no'] as num).toInt().toString();
+  }
+
+  Map<String, Object?> _headerValues(
+    Order order, {
+    required String customerCode,
+    required String salesDate,
+    bool isVoided = false,
+    bool includeServiceChargeFlag = false,
+  }) => {
+    'Bill_No': int.parse(order.billNo!),
+    'Ref_No': order.refNo,
+    'Ref_Type': _refType(order.type),
+    'Counter_No': SessionProvider.currentCounterNo,
+    'Customer_Code': customerCode,
+    'Customer_Name': order.customerName,
+    'PAX': order.pax ?? 1,
+    'Taxable': 0,
+    'Header_Ref': null,
+    'Header_Ref1': order.orderNote,
+    'Bill_Date': _dateOnly(order.createdAt),
+    'Bill_Time': _timeOnly(order.createdAt),
+    'Sales_Date': salesDate,
+    'Bill_Value': order.subtotal,
+    'Print_Count': 0,
+    'Tax_Total': 0,
+    'Service_Charge': 0,
+    'Recall_Bill_Flag': isVoided ? 1 : 0,
+    if (includeServiceChargeFlag) 'SC_Included': 0,
+  };
+
+  /// Stores database bill dates without a time component.
+  String _dateOnly(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// Stores database bill times without seconds or fractional seconds.
+  String _timeOnly(DateTime date) =>
+      '${date.hour.toString().padLeft(2, '0')}:'
+      '${date.minute.toString().padLeft(2, '0')}';
 
   Order _fromHeader(Map<String, Object?> row) => Order(
     refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}',

@@ -12,6 +12,7 @@ class KotService {
   }) async {
     final kotNo = await _next(transaction, salesDate);
     final timestamp = order.createdAt.toIso8601String();
+    final billDate = _dateOnly(order.createdAt);
     final menuCategories = <String, Map<String, Object?>>{};
     var nextLineNo = await _nextLineNo(
       transaction,
@@ -31,7 +32,7 @@ class KotService {
         'Bill_No': int.parse(order.billNo!),
         'Line_No': lineNo,
         'Counter_No': SessionProvider.currentCounterNo,
-        'Bill_Date': timestamp,
+        'Bill_Date': billDate,
         'Tran_Time': timestamp,
         'KOT_No': kotNo,
         'Waiter_Code': order.waiterName,
@@ -149,4 +150,10 @@ class KotService {
     'return' || 'returned' => 'TR',
     _ => 'TS',
   };
+
+  /// Stores database bill dates without a time component.
+  String _dateOnly(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 }

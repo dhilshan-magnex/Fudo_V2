@@ -576,8 +576,12 @@ Future<void> _showConfirmedOrder(
                         backgroundColor: GlobalColors.homeActionBackground,
                         minimumSize: const Size.fromHeight(48),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.of(sheetContext).pop();
+                        await context.read<OrderProvider>().checkoutOrder(
+                          order.billId,
+                        );
+                        if (!context.mounted) return;
                         context.read<RunningOrdersStore>().completeOrder(
                           order.billId,
                         );
