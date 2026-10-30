@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fudo_v2/functions/uservalidation/access_control_service.dart';
-import 'package:fudo_v2/core/session/running_orders_store.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/pages/delivery/delivery_page.dart';
@@ -10,6 +9,8 @@ import 'package:fudo_v2/pages/dinein/dinein_page.dart';
 import 'package:fudo_v2/pages/tables/presentation/table_page.dart';
 import 'package:fudo_v2/functions/uservalidation/app_functions.dart';
 import 'package:fudo_v2/functions/orders/state/order_provider.dart';
+import 'package:fudo_v2/functions/orders/models/order.dart';
+import 'package:fudo_v2/functions/orders/models/confirmed_order.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/authorization.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
@@ -107,15 +108,16 @@ class _BillingPageState extends State<BillingPage> {
       );
     }
 
-    final orderStore = context.watch<RunningOrdersStore>();
-    final orders = orderStore.orders
+    final orderProvider = context.watch<OrderProvider>();
+    final orders = orderProvider.orders
+        .where((order) => order.status != OrderStatus.voided)
         .map(
           (order) => _RunningOrder(
-            order.billId,
+            order.billNo ?? order.refNo,
             order.type,
             order.refNo,
-            order,
-            orderStore.isCompleted(order.billId),
+            _asConfirmedOrder(order),
+            order.status == OrderStatus.paid,
           ),
         )
         .toList();
@@ -150,4 +152,29 @@ class _BillingPageState extends State<BillingPage> {
       ),
     );
   }
+
+  ConfirmedOrder _asConfirmedOrder(Order order) => ConfirmedOrder(
+    billId: order.billNo ?? order.refNo,
+    refNo: order.refNo,
+    type: order.type,
+    items: order.items
+        .map(
+          (item) => ConfirmedOrderItem(
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.note,
+          ),
+        )
+        .toList(growable: false),
+    tableNumber: order.tableNumber,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    deliveryAddress: order.deliveryAddress,
+    deliveryArea: order.deliveryArea,
+    orderNote: order.orderNote,
+    waiterName: order.waiterName,
+    pax: order.pax,
+  );
 }

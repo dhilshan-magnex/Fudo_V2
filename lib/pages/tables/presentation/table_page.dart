@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fudo_v2/core/session/running_orders_store.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
+import 'package:fudo_v2/functions/orders/state/order_provider.dart';
+import 'package:fudo_v2/functions/orders/models/order.dart';
+import 'package:fudo_v2/functions/orders/models/confirmed_order.dart';
 import 'package:fudo_v2/pages/tables/domain/table_models.dart';
 import 'package:fudo_v2/pages/tables/state/table_layout_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
@@ -46,13 +48,31 @@ class _TablePageState extends State<TablePage> {
   void initState() {
     super.initState();
     Future.microtask(() => context.read<TableLayoutProvider>().load());
+    Future.microtask(() => context.read<OrderProvider>().load());
   }
 
   void _reload() {
     context.read<TableLayoutProvider>().load();
+    context.read<OrderProvider>().load();
   }
 
   Future<void> _selectTable(TableLayoutTable table) async {
+    final orderProvider = context.read<OrderProvider>();
+    final existingOrder = await orderProvider.getTableOrder(table.number);
+    if (!mounted) return;
+    if (existingOrder != null) {
+      final confirmedOrder = _asConfirmedOrder(existingOrder);
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => DineInPage(orderToUpdate: confirmedOrder),
+        ),
+      );
+      if (result == true && mounted) {
+        await orderProvider.load();
+      }
+      return;
+    }
+
     final session = context.read<SessionProvider>();
     final details = await showDialog<_TableOrderDetails>(
       context: context,
@@ -78,6 +98,7 @@ class _TablePageState extends State<TablePage> {
         ),
       );
       if (orderConfirmed == true && mounted) {
+        await orderProvider.load();
         Navigator.of(context).pop();
       }
     }
@@ -85,10 +106,9 @@ class _TablePageState extends State<TablePage> {
 
   @override
   Widget build(BuildContext context) {
-    final orderStore = context.watch<RunningOrdersStore>();
+    final orderProvider = context.watch<OrderProvider>();
     final tableLayout = context.watch<TableLayoutProvider>();
-    final occupiedTableNumbers = orderStore.orders
-        .where((order) => !orderStore.isCompleted(order.billId))
+    final occupiedTableNumbers = orderProvider.openTableOrders
         .map((order) => order.tableNumber?.trim().toLowerCase())
         .whereType<String>()
         .where((number) => number.isNotEmpty)
@@ -135,4 +155,26 @@ class _TablePageState extends State<TablePage> {
       ),
     );
   }
+
+  ConfirmedOrder _asConfirmedOrder(Order order) => ConfirmedOrder(
+    billId: order.billNo!,
+    refNo: order.refNo,
+    type: order.type,
+    items: order.items
+        .map(
+          (item) => ConfirmedOrderItem(
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.note,
+          ),
+        )
+        .toList(growable: false),
+    tableNumber: order.tableNumber,
+    customerName: order.customerName,
+    orderNote: order.orderNote,
+    waiterName: order.waiterName,
+    pax: order.pax,
+  );
 }

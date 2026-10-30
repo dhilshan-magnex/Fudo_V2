@@ -7,11 +7,11 @@ class SQLiteClass {
   // ============================================================
 
   static Future<List<Map<String, dynamic>>> getTableData(
-    String clientId,
+    String clientType,
     AppDatabase dbType,
     String tableName,
   ) async {
-    final dataSource = DataSourceManager.getDataSource(clientId);
+    final dataSource = DataSourceManager.getDataSource(clientType);
 
     // SQLITE CLIENT
 
@@ -37,13 +37,13 @@ class SQLiteClass {
   // ============================================================
 
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
-    String clientId,
+    String clientType,
     AppDatabase dbType,
     String tableName, {
     required String where,
     required List<dynamic> whereArgs,
   }) async {
-    final dataSource = DataSourceManager.getDataSource(clientId);
+    final dataSource = DataSourceManager.getDataSource(clientType);
 
     // SQLITE CLIENT
 
@@ -69,14 +69,14 @@ class SQLiteClass {
   ///
   /// Returns null if no matching row exists.
   static Future<Map<String, dynamic>?> getFirstTableRow(
-    String clientId,
+    String clientType,
     AppDatabase dbType,
     String tableName, {
     String? where,
     List<dynamic>? whereArgs,
   }) async {
     final rows = await getTableDataWhere(
-      clientId,
+      clientType,
       dbType,
       tableName,
       where: where ?? '1 = 1',

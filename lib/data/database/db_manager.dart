@@ -2,17 +2,22 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:fudo_v2/core/session/session_provider.dart';
 
 // Selects whether a client uses local SQLite data or the API.
 enum DataSource { sqlite, api }
 
 class DataSourceManager {
-  static DataSource getDataSource(String clientId) {
-    if (clientId == '940T0003') {
-      return DataSource.sqlite;
-    }
-
-    return DataSource.api;
+  static DataSource getDataSource([String? clientType]) {
+    final resolvedClientType =
+        (clientType ?? SessionProvider.currentClientType).trim();
+    return switch (resolvedClientType) {
+      '1' => DataSource.sqlite,
+      '2' => DataSource.api,
+      _ => throw StateError(
+        'Unsupported client type "$resolvedClientType". Expected 1 (SQLite) or 2 (API).',
+      ),
+    };
   }
 }
 
@@ -95,10 +100,10 @@ class DBManager {
   }
 
   static Future<Map<String, dynamic>?> getUserForLogin(
-    String clientId,
+    String clientType,
     String userId,
   ) async {
-    if (DataSourceManager.getDataSource(clientId) != DataSource.sqlite) {
+    if (DataSourceManager.getDataSource(clientType) != DataSource.sqlite) {
       return null;
     }
 

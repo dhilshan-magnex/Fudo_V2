@@ -36,7 +36,7 @@ class KotService {
         'Bill_Status': 0,
         'Tran_Time': tranTime,
         'KOT_No': kotNo,
-        'Waiter_Code': SessionProvider.currentGroupName,
+        'Waiter_Code': order.waiterName,
         'Tran_Type': _tranType(order.type),
         'Ref_No': order.refNo,
         'Ref_Type': _refType(order.type),

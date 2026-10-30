@@ -129,7 +129,7 @@ class OrderRepository {
       );
       await tx.update(
         _detailTable,
-        {'Bill_Status': 0},
+        {'Bill_Status': 0, 'Cashier_Code': null},
         where: 'Bill_No = ?',
         whereArgs: [int.parse(order.billNo!)],
       );
@@ -286,19 +286,27 @@ class OrderRepository {
 
   Future<List<Order>> getAll() async {
     final db = await _database.database;
-    final rows = await db.query('Tran_Header', orderBy: 'Bill_No DESC');
-    return rows.map(_fromHeader).toList();
+    final rows = await db.query(
+      _headerTable,
+      where: 'COALESCE(Recall_Bill_Flag, 0) = 0',
+      orderBy: 'Bill_No DESC',
+    );
+    return Future.wait(rows.map((row) => _loadOrder(db, row)));
   }
 
   Future<Order?> getByRefNo(String refNo) async {
     final db = await _database.database;
     final rows = await db.query(
-      'Tran_Header',
+      _headerTable,
       where: 'Ref_No = ?',
       whereArgs: [refNo],
-      limit: 1,
+      orderBy: 'Bill_No DESC',
     );
-    return rows.isEmpty ? null : _fromHeader(rows.single);
+    for (final row in rows) {
+      final order = await _loadOrder(db, row);
+      if (order.status == OrderStatus.open) return order;
+    }
+    return null;
   }
 
   Future<void> delete(String refNo) async {
@@ -368,7 +376,7 @@ class OrderRepository {
     'Customer_Name': order.customerName,
     'PAX': order.pax ?? 1,
     'Taxable': 0,
-    'Header_Ref': null,
+    'Header_Ref': order.tableNumber,
     'Header_Ref1': order.orderNote,
     'Bill_Date': _dateOnly(order.createdAt),
     'Bill_Time': _timeOnly(order.createdAt),
@@ -392,20 +400,68 @@ class OrderRepository {
       '${date.hour.toString().padLeft(2, '0')}:'
       '${date.minute.toString().padLeft(2, '0')}';
 
-  Order _fromHeader(Map<String, Object?> row) => Order(
-    refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}',
-    billNo: (row['Bill_No'] as num).toInt().toString(),
-    type: _orderType(row['Ref_Type'] as String? ?? ''),
-    items: const [],
-    status: (row['Recall_Bill_Flag'] as int? ?? 0) == 1
-        ? OrderStatus.voided
-        : OrderStatus.paid,
-    createdAt:
-        DateTime.tryParse(row['Bill_Date'] as String? ?? '') ?? DateTime.now(),
-    posId: row['Counter_No'] as String? ?? '',
-    tableNumber: row['Header_Ref'] as String?,
-    customerName: row['Customer_Name'] as String?,
-    orderNote: row['Header_Ref1'] as String?,
-    pax: row['PAX'] as int?,
-  );
+  Future<Order> _loadOrder(
+    DatabaseExecutor database,
+    Map<String, Object?> row,
+  ) async {
+    final billNo = (row['Bill_No'] as num).toInt();
+    final detailRows = await database.query(
+      _detailTable,
+      where: 'Bill_No = ? AND Child_Line_No = 0 AND Tran_Type != ?',
+      whereArgs: [billNo, _voidTransactionType],
+      orderBy: 'Line_No ASC',
+    );
+    final items = <OrderItem>[];
+    for (final detail in detailRows) {
+      final lineNo = (detail['Line_No'] as num).toInt();
+      final noteRows = await database.query(
+        _detailTable,
+        columns: const ['Tran_Description'],
+        where: 'Bill_No = ? AND Child_Line_No = ?',
+        whereArgs: [billNo, lineNo],
+        orderBy: 'Line_No ASC',
+      );
+      items.add(
+        OrderItem(
+          id: detail['Menu_ID']?.toString() ?? '',
+          name: detail['Tran_Description']?.toString() ?? '',
+          quantity: (detail['Tran_Qty'] as num?)?.toInt() ?? 0,
+          unitPrice: (detail['Unit_Price'] as num?)?.toDouble() ?? 0,
+          note: noteRows
+              .map((note) => note['Tran_Description']?.toString() ?? '')
+              .where((note) => note.isNotEmpty)
+              .join('\n'),
+        ),
+      );
+    }
+
+    return Order(
+      refNo: row['Ref_No'] as String? ?? 'LEGACY-${row['Bill_No']}',
+      billNo: billNo.toString(),
+      type: _orderType(row['Ref_Type'] as String? ?? ''),
+      items: List.unmodifiable(items),
+      status: (row['Recall_Bill_Flag'] as num?)?.toInt() == 1
+          ? OrderStatus.voided
+          : detailRows.isNotEmpty && detailRows.every(
+              (detail) =>
+                  detail['Cashier_Code']?.toString().isNotEmpty ?? false,
+            )
+          ? OrderStatus.paid
+          : OrderStatus.open,
+      createdAt:
+          DateTime.tryParse(row['Bill_Date'] as String? ?? '') ?? DateTime.now(),
+      posId: row['Counter_No'] as String? ?? '',
+      tableNumber:
+          row['Header_Ref']?.toString() ??
+          (_orderType(row['Ref_Type'] as String? ?? '') == 'Table'
+              ? row['Ref_No'] as String?
+              : null),
+      customerName: row['Customer_Name'] as String?,
+      orderNote: row['Header_Ref1'] as String?,
+      waiterName: detailRows.isEmpty
+          ? null
+          : detailRows.first['Waiter_Code'] as String?,
+      pax: row['PAX'] as int?,
+    );
+  }
 }

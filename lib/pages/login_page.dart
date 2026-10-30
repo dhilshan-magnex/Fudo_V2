@@ -5,6 +5,7 @@ import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/functions/authentication/auth_service.dart';
 import 'package:fudo_v2/functions/authentication/client_service.dart';
 import 'package:fudo_v2/pages/home/home_page.dart';
+import 'package:fudo_v2/functions/orders/state/order_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -71,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // Validate user
       final user = await _authService.validateLogin(
-        clientId,
+        clientType,
         loginId,
         password,
       );
@@ -110,6 +111,7 @@ class _LoginPageState extends State<LoginPage> {
         groupCode: user['Group_Code']?.toString(),
         groupName: user['Group_Name']?.toString(),
       );
+      await context.read<OrderProvider>().load();
 
       setState(() {
         _isLoggingIn = false;

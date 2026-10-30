@@ -3,11 +3,11 @@ import 'package:fudo_v2/data/database/db_manager.dart';
 
 class AuthService {
   Future<Map<String, dynamic>?> validateLogin(
-    String clientId,
+    String clientType,
     String userId,
     String password,
   ) async {
-    final user = await DBManager.getUserForLogin(clientId, userId);
+    final user = await DBManager.getUserForLogin(clientType, userId);
 
     if (user == null) return null;
 

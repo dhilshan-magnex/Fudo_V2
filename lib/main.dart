@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/session/session_provider.dart';
-import 'core/session/running_orders_store.dart';
 import 'functions/orders/data/order_database.dart';
 import 'functions/orders/data/order_repository.dart';
 import 'functions/orders/state/order_provider.dart';
@@ -28,7 +27,6 @@ void main() {
             OrderRepository(OrderDatabase(), KotService()),
           ),
         ),
-        ChangeNotifierProvider(create: (_) => RunningOrdersStore()),
         ChangeNotifierProvider(create: (_) => TableLayoutProvider()),
       ],
       child: const MyApp(),

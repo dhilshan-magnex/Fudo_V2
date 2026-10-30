@@ -12,6 +12,12 @@ class OrderProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   Object? get error => _error;
 
+  List<Order> get openTableOrders => List.unmodifiable(
+    _orders.where(
+      (order) => order.type == 'Table' && order.status == OrderStatus.open,
+    ),
+  );
+
   Future<void> load() async {
     _isLoading = true;
     _error = null;
@@ -24,6 +30,16 @@ class OrderProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<Order?> getTableOrder(String tableNumber) async {
+    final order = await _repository.getByRefNo(tableNumber.trim());
+    if (order == null ||
+        order.type != 'Table' ||
+        order.status != OrderStatus.open) {
+      return null;
+    }
+    return order;
   }
 
   Future<Order> createOrder({
@@ -65,7 +81,10 @@ class OrderProvider extends ChangeNotifier {
       pax: pax ?? 1,
     );
     final savedOrder = await _repository.createOrder(order);
-    _orders = [savedOrder, ..._orders];
+    _orders = [
+      savedOrder,
+      ..._orders.where((item) => item.refNo != savedOrder.refNo),
+    ];
     notifyListeners();
     return savedOrder;
   }
@@ -149,4 +168,6 @@ class OrderProvider extends ChangeNotifier {
     _orders = _orders.where((order) => order.refNo != refNo).toList();
     notifyListeners();
   }
+
+  Future<Order?> getByRefNo(String refNo) => _repository.getByRefNo(refNo);
 }

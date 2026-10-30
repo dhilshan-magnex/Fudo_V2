@@ -582,9 +582,6 @@ Future<void> _showConfirmedOrder(
                           order.billId,
                         );
                         if (!context.mounted) return;
-                        context.read<RunningOrdersStore>().completeOrder(
-                          order.billId,
-                        );
                       },
                       icon: const Icon(Icons.point_of_sale_rounded),
                       label: const Text('Checkout'),

@@ -37,6 +37,15 @@ class SessionProvider extends ChangeNotifier {
     return clientId;
   }
 
+  static String get currentClientType {
+    final clientType = _current?._clientType?.trim();
+    if (clientType == null || clientType.isEmpty) {
+      throw StateError('No client type is available in the current session.');
+    }
+
+    return clientType;
+  }
+
   /// The authenticated user who is operating the current POS session.
   static String get currentUserId {
     final userId = _current?._userId?.trim();

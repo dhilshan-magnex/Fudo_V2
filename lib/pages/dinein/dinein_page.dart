@@ -3,11 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:fudo_v2/core/session/running_orders_store.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
 import 'package:fudo_v2/functions/orders/models/order.dart';
+import 'package:fudo_v2/functions/orders/models/confirmed_order.dart';
 import 'package:fudo_v2/functions/orders/state/order_provider.dart';
 import 'package:fudo_v2/shared/layout/layout.dart';
 import 'package:fudo_v2/shared/widgets/buttons/back_button.dart';
@@ -290,7 +290,6 @@ class _DineInPageState extends State<DineInPage> {
           ),
         )
         .toList();
-    final store = context.read<RunningOrdersStore>();
     if (widget.orderToUpdate case final order?) {
       try {
         await context.read<OrderProvider>().addItemsToOrder(
@@ -317,7 +316,6 @@ class _DineInPageState extends State<DineInPage> {
           waiterName: order.waiterName,
           pax: order.pax,
         );
-        store.addItems(order.billId, items);
       } catch (_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -327,7 +325,7 @@ class _DineInPageState extends State<DineInPage> {
       }
     } else {
       try {
-        final savedOrder = await context.read<OrderProvider>().createOrder(
+        await context.read<OrderProvider>().createOrder(
           // The client ID is the only POS-level value currently available in
           // the session. Replace this with a terminal/Counter_No setting when
           // that configuration is added.
@@ -350,20 +348,6 @@ class _DineInPageState extends State<DineInPage> {
           orderNote: widget.orderNote,
           waiterName: widget.waiterName,
           pax: widget.pax,
-        );
-        store.addOrder(
-          billId: savedOrder.billNo,
-          refNo: savedOrder.refNo,
-          items: items,
-          tableNumber: widget.tableNumber,
-          customerName: customer?.name ?? widget.customerName,
-          customerPhone: widget.customerPhone ?? customer?.phone,
-          deliveryAddress: widget.deliveryAddress ?? customer?.address,
-          deliveryArea: widget.deliveryArea,
-          orderNote: widget.orderNote,
-          orderType: widget.orderType,
-          waiterName: widget.waiterName,
-          pax: savedOrder.pax,
         );
       } catch (_) {
         if (!mounted) return;
@@ -398,18 +382,12 @@ class _DineInPageState extends State<DineInPage> {
     final reason = await _quantityChangeReason();
     if (reason == null || !mounted) return false;
     final orderProvider = context.read<OrderProvider>();
-    final runningOrdersStore = context.read<RunningOrdersStore>();
     try {
       await orderProvider.updateOrderItemQuantity(
         billNo: order.billId,
         menuId: line.item.id,
         quantity: line.quantity,
         reason: reason,
-      );
-      runningOrdersStore.updateItemQuantity(
-        order.billId,
-        line.item.id,
-        line.quantity,
       );
       if (mounted) setState(() => _editingExistingItems = false);
       return true;

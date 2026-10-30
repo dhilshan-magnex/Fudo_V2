@@ -49,6 +49,7 @@ class Order {
     this.waiterName,
     this.pax,
   });
+
   final String refNo;
   final String? billNo;
   final String type;
@@ -64,6 +65,7 @@ class Order {
       orderNote,
       waiterName;
   final int? pax;
+
   double get subtotal => items.fold(0, (sum, item) => sum + item.subtotal);
   Order copyWith({
     String? billNo,
