@@ -14,6 +14,7 @@ class SessionProvider extends ChangeNotifier {
   String? _userName;
   String? _clientType;
   String? _groupCode;
+  String? _groupName;
   String? _locationId;
   String? _counterNo;
 
@@ -23,12 +24,10 @@ class SessionProvider extends ChangeNotifier {
   String? get userName => _userName;
   String? get clientType => _clientType;
   String? get groupCode => _groupCode;
+  String? get groupName => _groupName;
   String? get locationId => _locationId;
   String? get counterNo => _counterNo;
 
-  /// The client ID for the active application session.
-  /// API services do not have a BuildContext, so they access the same provider
-  /// instance through this getter when constructing request URLs.
   static String get currentClientId {
     final clientId = _current?._clientId?.trim();
     if (clientId == null || clientId.isEmpty) {
@@ -63,6 +62,30 @@ class SessionProvider extends ChangeNotifier {
     return counterNo;
   }
 
+  static String get currentClientName {
+    final clientName = _current?._clientName?.trim();
+    if (clientName == null || clientName.isEmpty) {
+      throw StateError('No client name is available in the current session.');
+    }
+    return clientName;
+  }
+
+  static String get currentGroupName {
+    final groupName = _current?._groupName?.trim();
+    if (groupName == null || groupName.isEmpty) {
+      throw StateError('No group name is available in the current session.');
+    }
+    return groupName;
+  }
+
+  static String get currentUserName {
+    final userName = _current?._userName?.trim();
+    if (userName == null || userName.isEmpty) {
+      throw StateError('No user name is available in the current session.');
+    }
+    return userName;
+  }
+
   bool get isLoggedIn => _userId != null;
 
   Future<void> setSession({
@@ -72,6 +95,7 @@ class SessionProvider extends ChangeNotifier {
     required String userName,
     String? clientType,
     String? groupCode,
+    String? groupName,
   }) async {
     final counterInfo = await DBManager.getCounterInfo();
     final locationId = counterInfo?['Location_ID']?.toString().trim();
@@ -89,6 +113,7 @@ class SessionProvider extends ChangeNotifier {
     _userName = userName;
     _clientType = clientType;
     _groupCode = groupCode;
+    _groupName = groupName;
     _locationId = locationId;
     _counterNo = counterNo;
 
@@ -102,6 +127,7 @@ class SessionProvider extends ChangeNotifier {
     _userName = null;
     _clientType = null;
     _groupCode = null;
+    _groupName = null;
     _locationId = null;
     _counterNo = null;
 

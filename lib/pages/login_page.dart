@@ -108,6 +108,7 @@ class _LoginPageState extends State<LoginPage> {
         userId: userId,
         userName: userName,
         groupCode: user['Group_Code']?.toString(),
+        groupName: user['Group_Name']?.toString(),
       );
 
       setState(() {

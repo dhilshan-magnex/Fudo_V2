@@ -3,14 +3,13 @@ import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/functions/orders/models/order.dart';
 
 class KotService {
-
   /// Allocates a KOT number and saves every ordered item to `Tran_Detail`.
   Future<int> saveOrderLines({
     required DatabaseExecutor transaction,
     required Order order,
     required String salesDate,
   }) async {
-    final kotNo = await _next(transaction, salesDate);
+    final kotNo = await _lastExistingKotNo(transaction, salesDate) + 1;
     final tranTime = _timeOnly(order.createdAt);
     final billDate = _dateOnly(order.createdAt);
     final menuCategories = <String, Map<String, Object?>>{};
@@ -37,7 +36,7 @@ class KotService {
         'Bill_Status': 0,
         'Tran_Time': tranTime,
         'KOT_No': kotNo,
-        'Waiter_Code': order.waiterName,
+        'Waiter_Code': SessionProvider.currentGroupName,
         'Tran_Type': _tranType(order.type),
         'Ref_No': order.refNo,
         'Ref_Type': _refType(order.type),
@@ -100,10 +99,6 @@ class KotService {
     final category = Map<String, Object?>.from(rows.single);
     cache[menuId] = category;
     return category;
-  }
-
-  Future<int> _next(DatabaseExecutor transaction, String salesDate) async {
-    return (await _lastExistingKotNo(transaction, salesDate)) + 1;
   }
 
   Future<int> _nextLineNo(
