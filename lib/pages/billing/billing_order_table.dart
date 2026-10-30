@@ -611,6 +611,7 @@ Future<void> _showConfirmedOrder(
   );
 
   if (shouldAddItems == true && context.mounted) {
+    await context.read<OrderProvider>().markBillOpenForAddItems(order.billId);
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => DineInPage(orderToUpdate: order),

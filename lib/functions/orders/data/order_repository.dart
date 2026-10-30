@@ -127,6 +127,12 @@ class OrderRepository {
         order: order,
         salesDate: salesDate,
       );
+      await tx.update(
+        _detailTable,
+        {'Bill_Status': 0},
+        where: 'Bill_No = ?',
+        whereArgs: [int.parse(order.billNo!)],
+      );
       await tx.rawUpdate(
         '''
           UPDATE Tran_Header
@@ -136,6 +142,30 @@ class OrderRepository {
         [order.subtotal, int.parse(order.billNo!)],
       );
     });
+  }
+
+  /// Marks every detail row for a bill as open for additional items.
+  Future<void> markBillOpenForAddItems(String billNo) async {
+    final db = await _database.database;
+    final updatedRows = await db.update(
+      _detailTable,
+      {'Bill_Status': 1},
+      where: 'Bill_No = ?',
+      whereArgs: [int.parse(billNo)],
+    );
+    if (updatedRows == 0) {
+      throw StateError('No detail rows found for bill $billNo.');
+    }
+  }
+
+  Future<void> markBillAddItemsConfirmed(String billNo) async {
+    final db = await _database.database;
+    await db.update(
+      _detailTable,
+      {'Bill_Status': 0},
+      where: 'Bill_No = ?',
+      whereArgs: [int.parse(billNo)],
+    );
   }
 
   Future<void> updateOrderItemQuantity({
@@ -212,8 +242,10 @@ class OrderRepository {
           ..['Unit_Price'] = 0
           ..['Tran_Amount'] = 0
           ..['Tran_Ref'] = reason
+          ..['User_Id'] = SessionProvider.currentUserId
           ..['Bill_Date'] = _dateOnly(now)
-          ..['Tran_Time'] = now.toIso8601String()
+          ..['Tran_Time'] = _timeOnly(now)
+          ..['Bill_Status'] = 0
           ..remove('id');
         await tx.insert(_detailTable, voidLine);
       } else if (quantity > currentQuantity) {

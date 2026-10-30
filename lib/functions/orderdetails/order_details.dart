@@ -11,7 +11,7 @@ class KotService {
     required String salesDate,
   }) async {
     final kotNo = await _next(transaction, salesDate);
-    final timestamp = order.createdAt.toIso8601String();
+    final tranTime = _timeOnly(order.createdAt);
     final billDate = _dateOnly(order.createdAt);
     final menuCategories = <String, Map<String, Object?>>{};
     var nextLineNo = await _nextLineNo(
@@ -32,8 +32,10 @@ class KotService {
         'Bill_No': int.parse(order.billNo!),
         'Line_No': lineNo,
         'Counter_No': SessionProvider.currentCounterNo,
+        'User_Id': SessionProvider.currentUserId,
         'Bill_Date': billDate,
-        'Tran_Time': timestamp,
+        'Bill_Status': 0,
+        'Tran_Time': tranTime,
         'KOT_No': kotNo,
         'Waiter_Code': order.waiterName,
         'Tran_Type': _tranType(order.type),
@@ -156,4 +158,8 @@ class KotService {
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+
+  String _timeOnly(DateTime date) =>
+      '${date.hour.toString().padLeft(2, '0')}:'
+      '${date.minute.toString().padLeft(2, '0')}';
 }

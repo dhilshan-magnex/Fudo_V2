@@ -120,6 +120,14 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> markBillOpenForAddItems(String billNo) async {
+    await _repository.markBillOpenForAddItems(billNo);
+  }
+
+  Future<void> markBillAddItemsConfirmed(String billNo) async {
+    await _repository.markBillAddItemsConfirmed(billNo);
+  }
+
   Future<void> updateOrderItemQuantity({
     required String billNo,
     required String menuId,

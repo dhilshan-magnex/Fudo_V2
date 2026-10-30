@@ -255,6 +255,9 @@ class _DineInPageState extends State<DineInPage> {
 
     if (!_hasPendingItems) {
       if (widget.orderToUpdate != null) {
+        await context.read<OrderProvider>().markBillAddItemsConfirmed(
+          widget.orderToUpdate!.billId,
+        );
         if (!mounted) return;
         setState(() => _isLeavingPage = true);
         Navigator.of(context).pop(true);
