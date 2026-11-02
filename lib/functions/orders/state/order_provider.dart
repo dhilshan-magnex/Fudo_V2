@@ -170,4 +170,7 @@ class OrderProvider extends ChangeNotifier {
   }
 
   Future<Order?> getByRefNo(String refNo) => _repository.getByRefNo(refNo);
+
+  Future<List<Map<String, Object?>>> getBillingItemRows(String billNo) =>
+      _repository.getBillingItemRows(billNo);
 }

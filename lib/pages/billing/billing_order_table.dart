@@ -351,6 +351,19 @@ Future<void> _showConfirmedOrder(
   required bool isCompleted,
 }) async {
   final priceFormat = NumberFormat('#,##0.00');
+  final itemRows = await context.read<OrderProvider>().getBillingItemRows(order.billId);
+  if (!context.mounted) return;
+  final detailItems = itemRows.map((row) {
+    final isVoided = row['Tran_Type']?.toString() == 'TV';
+    return ConfirmedOrderItem(
+      id: row['Menu_ID']?.toString() ?? '',
+      name: row['Tran_Description']?.toString() ?? '',
+      quantity: (row['Tran_Qty'] as num?)?.toInt() ?? 0,
+      unitPrice: (row['Unit_Price'] as num?)?.toDouble() ?? 0,
+      note: isVoided ? row['Tran_Ref']?.toString() ?? '' : '',
+      isVoided: isVoided,
+    );
+  }).toList(growable: false);
   // Do not push the edit page in the same callback that pops this sheet.
   // The route is still disposing at that point, which can leave inherited
   // widget dependents attached and result in duplicate GlobalKey errors.
@@ -474,14 +487,16 @@ Future<void> _showConfirmedOrder(
                       ),
                     ),
                   ),
-                  for (var index = 0; index < order.items.length; index++) ...[
+                  for (var index = 0; index < detailItems.length; index++) ...[
                     if (index > 0)
                       const Divider(
                         height: 1,
                         color: GlobalColors.billingRowDivider,
                       ),
                     Container(
-                      color: Colors.white,
+                      color: detailItems[index].isVoided
+                          ? const Color(0xFFFFF0F0)
+                          : Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -493,27 +508,35 @@ Future<void> _showConfirmedOrder(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  order.items[index].name,
-                                  style: const TextStyle(
-                                    color: GlobalColors.primaryText,
+                                  detailItems[index].name,
+                                  style: TextStyle(
+                                    color: detailItems[index].isVoided
+                                        ? const Color(0xFFB3261E)
+                                        : GlobalColors.primaryText,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
 
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${order.items[index].quantity} × ${priceFormat.format(order.items[index].unitPrice)}',
-                                  style: const TextStyle(
-                                    color: GlobalColors.secondaryText,
+                                  '${detailItems[index].quantity} × ${priceFormat.format(detailItems[index].unitPrice)}',
+                                  style: TextStyle(
+                                    color: detailItems[index].isVoided
+                                        ? const Color(0xFFB3261E)
+                                        : GlobalColors.secondaryText,
                                     fontSize: 12,
                                   ),
                                 ),
-                                if (order.items[index].note.isNotEmpty) ...[
+                                if (detailItems[index].isVoided)
+                                  const Text('VOIDED', style: TextStyle(color: Color(0xFFB3261E), fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+                                if (detailItems[index].note.isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Note: ${order.items[index].note}',
-                                    style: const TextStyle(
-                                      color: GlobalColors.secondaryText,
+                                    '${detailItems[index].isVoided ? 'Reason' : 'Note'}: ${detailItems[index].note}',
+                                    style: TextStyle(
+                                      color: detailItems[index].isVoided
+                                          ? const Color(0xFFB3261E)
+                                          : GlobalColors.secondaryText,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -523,9 +546,11 @@ Future<void> _showConfirmedOrder(
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            priceFormat.format(order.items[index].subtotal),
-                            style: const TextStyle(
-                              color: GlobalColors.primaryText,
+                            priceFormat.format(detailItems[index].subtotal),
+                            style: TextStyle(
+                              color: detailItems[index].isVoided
+                                  ? const Color(0xFFB3261E)
+                                  : GlobalColors.primaryText,
                               fontWeight: FontWeight.w700,
                             ),
                           ),

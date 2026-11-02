@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (loginId.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Please enter username and password'),
           backgroundColor: Colors.red,
         ),
@@ -130,7 +130,9 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Login failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
 
       setState(() {
@@ -138,8 +140,8 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error code: LOGIN-001'),
+        SnackBar(
+          content: Text('Login setup failed: $error'),
           backgroundColor: Colors.red,
         ),
       );

@@ -154,27 +154,27 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   ConfirmedOrder _asConfirmedOrder(Order order) => ConfirmedOrder(
-    billId: order.billNo ?? order.refNo,
-    refNo: order.refNo,
-    type: order.type,
-    items: order.items
-        .map(
-          (item) => ConfirmedOrderItem(
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            note: item.note,
-          ),
-        )
-        .toList(growable: false),
-    tableNumber: order.tableNumber,
-    customerName: order.customerName,
-    customerPhone: order.customerPhone,
-    deliveryAddress: order.deliveryAddress,
-    deliveryArea: order.deliveryArea,
-    orderNote: order.orderNote,
-    waiterName: order.waiterName,
-    pax: order.pax,
-  );
+      billId: order.billNo ?? order.refNo,
+      refNo: order.refNo,
+      type: order.type,
+      items: order.items
+          .map(
+            (item) => ConfirmedOrderItem(
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              note: item.note,
+            ),
+          )
+          .toList(growable: false),
+      tableNumber: order.tableNumber,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      deliveryAddress: order.deliveryAddress,
+      deliveryArea: order.deliveryArea,
+      orderNote: order.orderNote,
+      waiterName: order.waiterName,
+      pax: order.pax,
+      );
 }

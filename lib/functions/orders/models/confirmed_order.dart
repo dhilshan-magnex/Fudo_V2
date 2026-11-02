@@ -6,6 +6,7 @@ class ConfirmedOrderItem {
     required this.unitPrice,
     this.note = '',
     this.isNewlyAdded = false,
+    this.isVoided = false,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class ConfirmedOrderItem {
   final double unitPrice;
   final String note;
   final bool isNewlyAdded;
+  final bool isVoided;
 
   double get subtotal => quantity * unitPrice;
 }

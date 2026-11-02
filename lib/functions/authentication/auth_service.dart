@@ -13,12 +13,9 @@ class AuthService {
 
     final storedPassword = (user['User_Pwd'] ?? '').toString();
 
-    bool passwordValid;
-
-    // Plaintext credential records are intentionally not accepted. Migrate
-    // legacy users to bcrypt hashes before enabling their accounts.
-    if (!_isBcryptHash(storedPassword)) return null;
-    passwordValid = BCrypt.checkpw(password, storedPassword);
+    final passwordValid = _isBcryptHash(storedPassword)
+        ? _checkBcryptPassword(password, storedPassword)
+        : password == storedPassword;
 
     if (!passwordValid) {
       return null;
@@ -31,5 +28,15 @@ class AuthService {
     return value.startsWith(r'$2a$') ||
         value.startsWith(r'$2b$') ||
         value.startsWith(r'$2y$');
+  }
+
+  bool _checkBcryptPassword(String password, String storedHash) {
+    try {
+      return BCrypt.checkpw(password, storedHash);
+    } on FormatException {
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 }

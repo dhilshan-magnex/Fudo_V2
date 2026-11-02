@@ -309,6 +309,17 @@ class OrderRepository {
     return null;
   }
 
+  /// Loads transaction rows for the billing detail sheet, including TV audit rows.
+  Future<List<Map<String, Object?>>> getBillingItemRows(String billNo) async {
+    final db = await _database.database;
+    return db.query(
+      _detailTable,
+      where: 'Bill_No = ? AND Child_Line_No = 0',
+      whereArgs: [int.parse(billNo)],
+      orderBy: 'Line_No ASC',
+    );
+  }
+
   Future<void> delete(String refNo) async {
     final db = await _database.database;
     await db.delete('Tran_Header', where: 'Ref_No = ?', whereArgs: [refNo]);
