@@ -5,6 +5,29 @@ final _cartPriceFormat = NumberFormat('#,##0.00');
 
 enum _DineInCartSheetAction { confirmOrder, confirmExistingQuantity }
 
+class _VoidedCartItemBadge extends StatelessWidget {
+  const _VoidedCartItemBadge();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(left: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFDAD6),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: const Text(
+      'VOIDED',
+      style: TextStyle(
+        color: Color(0xFFB3261E),
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.6,
+      ),
+    ),
+  );
+}
+
 class _DineInCartSheetResult {
   const _DineInCartSheetResult.confirmOrder()
     : action = _DineInCartSheetAction.confirmOrder,
@@ -101,13 +124,13 @@ Future<void> _showDineInCart(
 
         final subtotal = cart.values.fold<double>(
           0,
-          (total, line) => total + line.item.price * line.quantity,
+          (total, line) => total + (line.isVoided ? 0 : line.item.price * line.quantity),
         );
         final itemCount = cart.values.fold<int>(
           0,
           (total, line) =>
-              total +
-              (showNewItemHighlight ? line.pendingQuantity : line.quantity),
+              total + (line.isVoided ? 0 :
+              (showNewItemHighlight ? line.pendingQuantity : line.quantity)),
         );
         return SafeArea(
           child: SizedBox(
@@ -172,16 +195,19 @@ Future<void> _showDineInCart(
                           children: [
                             for (final line in cart.values.toList())
                               Card(
-                                color:
-                                    showNewItemHighlight &&
-                                        line.hasPendingAdditions
+                                color: line.isVoided
+                                    ? const Color(0xFFFFF0F0)
+                                    : showNewItemHighlight &&
+                                          line.hasPendingAdditions
                                     ? const Color(0xFF90EE90)
                                     : AppPalette.white,
                                 elevation: 0,
                                 margin: const EdgeInsets.only(bottom: 10),
                                 shape: RoundedRectangleBorder(
                                   side: BorderSide(
-                                    color:
+                                    color: line.isVoided
+                                        ? const Color(0xFFFFC7C2)
+                                        :
                                         showNewItemHighlight &&
                                             line.hasPendingAdditions
                                         ? const Color(0xFFE4B65F)
@@ -195,15 +221,16 @@ Future<void> _showDineInCart(
                                       Expanded(
                                         child: Text(
                                           line.item.name,
-                                          style: const TextStyle(
-                                            color: GlobalColors.primaryText,
+                                          style: TextStyle(
+                                            color: line.isVoided
+                                                ? const Color(0xFFB3261E)
+                                                : GlobalColors.primaryText,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
-                                      if (showNewItemHighlight &&
-                                          line.hasPendingAdditions)
-                                        const _PendingCartItemBadge(),
+                                      if (line.isVoided)
+                                        const _VoidedCartItemBadge(),
                                     ],
                                   ),
                                   subtitle: Column(
@@ -212,11 +239,13 @@ Future<void> _showDineInCart(
                                     children: [
                                       Text(
                                         'Unit price  ${_cartPriceFormat.format(line.item.price)}',
-                                        style: const TextStyle(
-                                          color: GlobalColors.secondaryText,
+                                        style: TextStyle(
+                                          color: line.isVoided ? const Color(0xFFB3261E) : GlobalColors.secondaryText,
                                         ),
                                       ),
-                                      TextButton.icon(
+                                      if (line.isVoided && line.note.isNotEmpty)
+                                        Text('Reason: ${line.note}', style: const TextStyle(color: Color(0xFFB3261E), fontSize: 12)),
+                                      if (!line.isVoided) TextButton.icon(
                                         onPressed: () async {
                                           await onEditNote(line);
                                           refreshSheet(() {});
@@ -246,6 +275,12 @@ Future<void> _showDineInCart(
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          if (line.isVoided)
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text('${line.quantity}'),
+                                            ),
+                                          if (!line.isVoided) ...[
                                           IconButton(
                                             tooltip: 'Decrease quantity',
                                             icon: const Icon(
@@ -302,9 +337,10 @@ Future<void> _showDineInCart(
                                                         ),
                                                   ),
                                             ),
+                                          ],
                                         ],
                                       ),
-                                      Text(
+                                      if (!line.isVoided) Text(
                                         'Line subtotal  ${_cartPriceFormat.format(line.item.price * line.quantity)}',
                                         style: const TextStyle(
                                           color: GlobalColors.primaryText,
@@ -317,9 +353,9 @@ Future<void> _showDineInCart(
                                     tooltip: 'Remove item',
                                     icon: const Icon(Icons.delete_outline),
                                     color: GlobalColors.secondaryText,
-                                    onPressed: line.hasPendingAdditions ||
+                                    onPressed: !line.isVoided && (line.hasPendingAdditions ||
                                             (showNewItemHighlight &&
-                                                line.existingQuantity > 0)
+                                                line.existingQuantity > 0))
                                         ? () => removeSelectedItem(line)
                                         : null,
                                   ),

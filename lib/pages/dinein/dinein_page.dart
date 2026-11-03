@@ -64,6 +64,7 @@ class _DineInPageState extends State<DineInPage> {
   final Map<String, _CartLine> _cart = {};
   bool _isLeavingPage = false;
   bool _editingExistingItems = false;
+  bool _hasLoadedVoidedLines = false;
   bool _isCollectingInitialCustomer = false;
   CustomerContact? _customer;
 
@@ -75,7 +76,10 @@ class _DineInPageState extends State<DineInPage> {
   );
 
   bool get _hasPendingItems =>
-      _cart.values.any((line) => line.quantity > line.existingQuantity);
+      _cart.values.any(
+        (line) =>
+            !line.isVoided && line.quantity > line.existingQuantity,
+      );
 
   @override
   void initState() {
@@ -83,6 +87,7 @@ class _DineInPageState extends State<DineInPage> {
     final order = widget.orderToUpdate;
     if (order != null) {
       for (final item in order.items) {
+        if (item.isVoided) continue;
         final current = _cart[item.id];
         final quantity = (current?.quantity ?? 0) + item.quantity;
         final existingQuantity =
@@ -140,6 +145,32 @@ class _DineInPageState extends State<DineInPage> {
   }
 
   Future<_DineInData> _loadMenu() async {
+    final order = widget.orderToUpdate;
+    if (order != null && !_hasLoadedVoidedLines) {
+      _hasLoadedVoidedLines = true;
+      final rows = await context.read<OrderProvider>().getBillingItemRows(order.billId);
+      if (mounted) {
+          for (final row in rows.where((row) => row['Tran_Type']?.toString() == 'TV')) {
+            final key = 'void-${row['Line_No'] ?? _cart.length}';
+            final item = DineInMenuItem(
+              id: key,
+              name: row['Tran_Description']?.toString() ?? '',
+              longName: row['Tran_Description']?.toString() ?? '',
+              categoryCode: '',
+              price: (row['Unit_Price'] as num?)?.toDouble() ?? 0,
+              colorCode: '',
+              order: 0,
+              isAvailableForDineIn: true,
+            );
+            _cart[key] = _CartLine(
+              item,
+              (row['Tran_Qty'] as num?)?.toInt() ?? 0,
+              note: row['Tran_Ref']?.toString() ?? '',
+              isVoided: true,
+            );
+          }
+      }
+    }
     final database = await DBManager.getDatabase(AppDatabase.fudo);
     final results = await Future.wait([
       database.query('Menu_Items'),
@@ -183,8 +214,6 @@ class _DineInPageState extends State<DineInPage> {
   void _addToCart(DineInMenuItem item) {
     setState(() {
       final line = _cart[item.id];
-      // Existing bill lines are read-only while reopening an order. Only
-      // entirely new menu items may be added from this screen.
       if (widget.orderToUpdate != null &&
           line != null &&
           line.existingQuantity > 0) {
@@ -228,11 +257,6 @@ class _DineInPageState extends State<DineInPage> {
   }
 
   Future<void> _confirmOrder() async {
-    // Quantity edits on an existing order are not new order lines. Persist
-    // them before calculating the lines that still need to be added below.
-    // Without this step, the final "Confirm order" action could close the
-    // order without saving a quantity edit (or save the difference as a new
-    // line instead).
     final changedExistingLines = _cart.values
         .where(
           (line) =>
@@ -279,7 +303,10 @@ class _DineInPageState extends State<DineInPage> {
     }
 
     final items = _cart.values
-        .where((line) => line.quantity > line.existingQuantity)
+        .where(
+          (line) =>
+              !line.isVoided && line.quantity > line.existingQuantity,
+        )
         .map(
           (line) => ConfirmedOrderItem(
             id: line.item.id,

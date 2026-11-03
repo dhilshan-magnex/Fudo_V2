@@ -10,13 +10,20 @@ import 'functions/orderdetails/order_details.dart';
 import 'pages/tables/state/table_layout_provider.dart';
 import 'pages/login_page.dart';
 import 'data/api/api_http_client.dart';
+import 'data/database/db_manager.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   // Use sqflite_common_ffi only for desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Copy the bundled system database to the app's database directory on the
+  // first launch, before any screen needs client or counter configuration.
+  await DBManager.getDatabase(AppDatabase.sys);
 
   runApp(
     MultiProvider(

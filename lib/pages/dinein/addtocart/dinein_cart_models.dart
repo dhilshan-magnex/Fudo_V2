@@ -6,11 +6,13 @@ class _CartLine {
     this.quantity, {
     this.note = '',
     this.existingQuantity = 0,
+    this.isVoided = false,
   });
   final DineInMenuItem item;
   final int quantity;
   final String note;
   final int existingQuantity;
+  final bool isVoided;
 
   bool get hasPendingAdditions => quantity > existingQuantity;
   int get pendingQuantity =>

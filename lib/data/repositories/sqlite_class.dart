@@ -2,10 +2,8 @@ import '../synchronization/api_route_registry.dart';
 import '../database/db_manager.dart';
 
 class SQLiteClass {
-  // ============================================================
-  // GET ALL TABLE DATA
-  // ============================================================
 
+  // GET ALL TABLE DATA
   static Future<List<Map<String, dynamic>>> getTableData(
     String clientType,
     AppDatabase dbType,
@@ -17,25 +15,18 @@ class SQLiteClass {
 
     if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
-
       return db.query(tableName);
     }
 
     // API CLIENT
 
     await _syncTableFromApi(dbType, tableName);
-
-    // After API synchronization,
-    // read the synchronized data from SQLite.
     final db = await DBManager.getDatabase(dbType);
-
     return db.query(tableName);
   }
 
-  // ============================================================
-  // GET DATA WITH WHERE CONDITION
-  // ============================================================
 
+  // GET DATA WITH WHERE CONDITION
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
     String clientType,
     AppDatabase dbType,
@@ -56,18 +47,10 @@ class SQLiteClass {
     // API CLIENT
 
     await _syncTableFromApi(dbType, tableName);
-
-    // Read synchronized data from SQLite.
     final db = await DBManager.getDatabase(dbType);
-
     return db.query(tableName, where: where, whereArgs: whereArgs);
   }
 
-  // GET FIRST ROW
-
-  /// Returns the first matching row.
-  ///
-  /// Returns null if no matching row exists.
   static Future<Map<String, dynamic>?> getFirstTableRow(
     String clientType,
     AppDatabase dbType,
@@ -90,14 +73,9 @@ class SQLiteClass {
     return rows.first;
   }
 
-  // ============================================================
+ 
   // API SYNCHRONIZATION
-  // ============================================================
 
-  /// Requests synchronization for the specified table.
-  ///
-  /// SQLiteClass does not know which API handles the table.
-  /// ApiRouteRegistry is responsible for deciding that.
   static Future<void> _syncTableFromApi(
     AppDatabase dbType,
     String tableName,

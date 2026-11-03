@@ -67,12 +67,12 @@ class _DineInCartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtotal = cart.values.fold<double>(
       0,
-      (total, line) => total + line.item.price * line.quantity,
+      (total, line) => total + (line.isVoided ? 0 : line.item.price * line.quantity),
     );
     final itemCount = cart.values.fold<int>(
       0,
       (total, line) =>
-          total + (showNewItemHighlight ? line.pendingQuantity : line.quantity),
+        total + (line.isVoided ? 0 : (showNewItemHighlight ? line.pendingQuantity : line.quantity)),
     );
 
     void changeQuantity(_CartLine line, int change) {
@@ -169,7 +169,9 @@ class _DineInCartPage extends StatelessWidget {
                     children: [
                       for (final line in cart.values.toList())
                         Card(
-                          color:
+                          color: line.isVoided
+                              ? const Color(0xFFFFF0F0)
+                              :
                               showNewItemHighlight && line.hasPendingAdditions
                               ? const Color(0xFF90EE90)
                               : AppPalette.white,
@@ -177,7 +179,7 @@ class _DineInCartPage extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(
                             side: BorderSide(
-                              color:
+                              color: line.isVoided ? const Color(0xFFFFC7C2) :
                                   showNewItemHighlight &&
                                       line.hasPendingAdditions
                                   ? const Color(0xFFE4B65F)
@@ -197,16 +199,14 @@ class _DineInCartPage extends StatelessWidget {
                                         line.item.name,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: GlobalColors.primaryText,
+                                        style: TextStyle(
+                                          color: line.isVoided ? const Color(0xFFB3261E) : GlobalColors.primaryText,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),
-                                    if (showNewItemHighlight &&
-                                        line.hasPendingAdditions)
-                                      const _PendingCartItemBadge(),
-                                    IconButton(
+                                    if (line.isVoided) const _VoidedCartItemBadge(),
+                                    if (!line.isVoided) IconButton(
                                       constraints:
                                           const BoxConstraints.tightFor(
                                             width: 36,
@@ -229,12 +229,14 @@ class _DineInCartPage extends StatelessWidget {
                                 ),
                                 Text(
                                   'Unit price  ${_cartPriceFormat.format(line.item.price)}',
-                                  style: const TextStyle(
-                                    color: GlobalColors.secondaryText,
+                                  style: TextStyle(
+                                    color: line.isVoided ? const Color(0xFFB3261E) : GlobalColors.secondaryText,
                                     fontSize: 12,
                                   ),
                                 ),
-                                TextButton.icon(
+                                if (line.isVoided && line.note.isNotEmpty)
+                                  Text('Reason: ${line.note}', style: const TextStyle(color: Color(0xFFB3261E), fontSize: 12)),
+                                if (!line.isVoided) TextButton.icon(
                                   onPressed: () => onEditNote(line),
                                   icon: const Icon(
                                     Icons.edit_note_rounded,
@@ -264,6 +266,12 @@ class _DineInCartPage extends StatelessWidget {
                                   ),
                                 Row(
                                   children: [
+                                    if (line.isVoided)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text('${line.quantity}'),
+                                      ),
+                                    if (!line.isVoided) ...[
                                     IconButton(
                                       constraints:
                                           const BoxConstraints.tightFor(
@@ -345,6 +353,7 @@ class _DineInCartPage extends StatelessWidget {
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
+                                    ],
                                   ],
                                 ),
                               ],

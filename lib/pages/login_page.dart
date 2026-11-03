@@ -24,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoggingIn = false;
   bool _obscurePassword = true;
 
-  static const accentColor = Color(0xFF2D2D2D);
+  static const accentColor = GlobalColors.homeActionBackground;
 
   @override
   void dispose() {
@@ -150,144 +150,133 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 600;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-
+      backgroundColor: GlobalColors.homeBackground,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'FUDO V2',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 1,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Text(
-                    'Sign in to continue',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  SizedBox(
-                    width: 280,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Username',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
-
-                        TextField(
-                          controller: _userNameController,
-                          textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: accentColor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 20 : 40,
+              vertical: 24,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: Container(
+                    padding: EdgeInsets.all(compact ? 24 : 40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: GlobalColors.billingCardBorder),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x140F172A),
+                          blurRadius: 28,
+                          offset: Offset(0, 12),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  SizedBox(
-                    width: 280,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Text(
-                          'Password',
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                          'FUDO V2',
+                          style: TextStyle(
+                            color: GlobalColors.primaryText,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
                         ),
-
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Sign in to continue',
+                          style: TextStyle(
+                            color: GlobalColors.secondaryText,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        _buildInputLabel('Username'),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _userNameController,
+                          textInputAction: TextInputAction.next,
+                          decoration: _inputDecoration(
+                            hint: 'Enter your username',
+                            icon: Icons.person_outline,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        _buildInputLabel('Password'),
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) =>
                               _isLoggingIn ? null : _handleLogin(),
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            enabledBorder: const OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
-                            ),
-                            focusedBorder: const OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: accentColor,
-                                width: 2,
-                              ),
-                            ),
+                          decoration: _inputDecoration(
+                            hint: 'Enter your password',
+                            icon: Icons.lock_outline,
+                          ).copyWith(
                             suffixIcon: IconButton(
+                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                               icon: Icon(
                                 _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Colors.grey,
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: GlobalColors.secondaryText,
                                 size: 20,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                              onPressed: () => setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              }),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _isLoggingIn ? null : _handleLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentColor,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: accentColor.withValues(alpha: 0.65),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: _isLoggingIn
+                                ? const SizedBox(
+                                    width: 21,
+                                    height: 21,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Sign in',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 48),
-
-                  SizedBox(
-                    width: 280,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: SizedBox(
-                        width: 120,
-                        child: ElevatedButton(
-                          onPressed: _isLoggingIn ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor,
-                            foregroundColor: GlobalColors.buttonForeground(
-                              accentColor,
-                            ),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          child: Text(_isLoggingIn ? 'Please wait' : 'Login'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -299,26 +288,18 @@ class _LoginPageState extends State<LoginPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Magnex Solutions',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                // Text(
-                //   'v1.0.0',
-                //   style: TextStyle(
-                //     fontSize: 11,
-                //     color: Colors.grey.shade400,
-                //   ),
-                // ),
-              ],
+            const Text(
+              'Magnex Solutions',
+              style: TextStyle(
+                fontSize: 12,
+                color: GlobalColors.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-
             IconButton(
+              tooltip: 'Settings',
               icon: const Icon(Icons.settings_outlined),
+              color: GlobalColors.secondaryText,
               onPressed: () {},
             ),
           ],
@@ -326,4 +307,35 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  Widget _buildInputLabel(String label) => Text(
+    label,
+    style: const TextStyle(
+      color: GlobalColors.primaryText,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+  );
+
+  InputDecoration _inputDecoration({required String hint, required IconData icon}) =>
+      InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF9BA8AA), fontSize: 14),
+        prefixIcon: Icon(icon, size: 20, color: GlobalColors.secondaryText),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFA),
+        contentPadding: const EdgeInsets.symmetric(vertical: 17, horizontal: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: GlobalColors.divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: GlobalColors.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: accentColor, width: 1.6),
+        ),
+      );
 }
