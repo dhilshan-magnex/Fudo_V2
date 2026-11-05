@@ -66,7 +66,9 @@ class SessionProvider extends ChangeNotifier {
   static String get currentCounterNo {
     final counterNo = _current?._counterNo?.trim();
     if (counterNo == null || counterNo.isEmpty) {
-      throw StateError('No counter number is available in the current session.');
+      throw StateError(
+        'No counter number is available in the current session.',
+      );
     }
     return counterNo;
   }
@@ -102,15 +104,20 @@ class SessionProvider extends ChangeNotifier {
     String? clientName,
     required String userId,
     required String userName,
+    required String selectedCounterNo,
     String? clientType,
     String? groupCode,
     String? groupName,
   }) async {
-    final counterInfo = await DBManager.getCounterInfo();
+    final counterInfo = await DBManager.getCounterInfo(
+      counterNo: selectedCounterNo,
+    );
     final locationId = counterInfo?['Location_ID']?.toString().trim();
     final counterNo = counterInfo?['Counter_No']?.toString().trim();
     if (locationId == null || locationId.isEmpty) {
-      throw StateError('Location_ID is not configured for counter 01.');
+      throw StateError(
+        'Location_ID is not configured for counter $selectedCounterNo.',
+      );
     }
     if (counterNo == null || counterNo.isEmpty) {
       throw StateError('Counter_No is not configured in Counter_Info.');

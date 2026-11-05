@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../core/config/api_config.dart';
+import '../../core/session/session_provider.dart';
 import '../database/db_manager.dart';
 
 class PosMastApi {
@@ -37,7 +38,20 @@ class PosMastApi {
 
     final rows = await _fetchRows(resolvedApiUrl, headers: headers);
 
-    return savePosMastRows(rows, clearExistingData: clearExistingData);
+    final syncResult = await savePosMastRows(
+      rows,
+      clearExistingData: clearExistingData,
+    );
+    final resolvedLocationId = locationId ?? SessionProvider.currentLocationId;
+    final counterNumbers = rows
+        .map((row) => _readValue(row, 'Counter_No')?.toString() ?? '')
+        .toSet();
+    await DBManager.registerCounters(
+      counterNumbers: counterNumbers,
+      locationId: resolvedLocationId,
+    );
+
+    return syncResult;
   }
 
   Future<List<Map<String, dynamic>>> _fetchRows(

@@ -8,7 +8,9 @@ import 'package:fudo_v2/pages/home/home_page.dart';
 import 'package:fudo_v2/functions/orders/state/order_provider.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({required this.selectedCounterNo, super.key});
+
+  final String selectedCounterNo;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -108,6 +110,7 @@ class _LoginPageState extends State<LoginPage> {
         clientType: clientType,
         userId: userId,
         userName: userName,
+        selectedCounterNo: widget.selectedCounterNo,
         groupCode: user['Group_Code']?.toString(),
         groupName: user['Group_Name']?.toString(),
       );
@@ -163,7 +166,9 @@ class _LoginPageState extends State<LoginPage> {
               vertical: 24,
             ),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - 48,
+              ),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
@@ -222,24 +227,27 @@ class _LoginPageState extends State<LoginPage> {
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) =>
                               _isLoggingIn ? null : _handleLogin(),
-                          decoration: _inputDecoration(
-                            hint: 'Enter your password',
-                            icon: Icons.lock_outline,
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: GlobalColors.secondaryText,
-                                size: 20,
+                          decoration:
+                              _inputDecoration(
+                                hint: 'Enter your password',
+                                icon: Icons.lock_outline,
+                              ).copyWith(
+                                suffixIcon: IconButton(
+                                  tooltip: _obscurePassword
+                                      ? 'Show password'
+                                      : 'Hide password',
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: GlobalColors.secondaryText,
+                                    size: 20,
+                                  ),
+                                  onPressed: () => setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  }),
+                                ),
                               ),
-                              onPressed: () => setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              }),
-                            ),
-                          ),
                         ),
                         const SizedBox(height: 30),
                         SizedBox(
@@ -249,7 +257,9 @@ class _LoginPageState extends State<LoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: accentColor,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor: accentColor.withValues(alpha: 0.65),
+                              disabledBackgroundColor: accentColor.withValues(
+                                alpha: 0.65,
+                              ),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -317,25 +327,27 @@ class _LoginPageState extends State<LoginPage> {
     ),
   );
 
-  InputDecoration _inputDecoration({required String hint, required IconData icon}) =>
-      InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF9BA8AA), fontSize: 14),
-        prefixIcon: Icon(icon, size: 20, color: GlobalColors.secondaryText),
-        filled: true,
-        fillColor: const Color(0xFFF8FAFA),
-        contentPadding: const EdgeInsets.symmetric(vertical: 17, horizontal: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: GlobalColors.divider),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: GlobalColors.divider),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accentColor, width: 1.6),
-        ),
-      );
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+  }) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: Color(0xFF9BA8AA), fontSize: 14),
+    prefixIcon: Icon(icon, size: 20, color: GlobalColors.secondaryText),
+    filled: true,
+    fillColor: const Color(0xFFF8FAFA),
+    contentPadding: const EdgeInsets.symmetric(vertical: 17, horizontal: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: GlobalColors.divider),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: GlobalColors.divider),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: accentColor, width: 1.6),
+    ),
+  );
 }

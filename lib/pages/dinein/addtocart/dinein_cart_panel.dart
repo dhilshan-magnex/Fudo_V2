@@ -205,6 +205,10 @@ class _DineInCartPage extends StatelessWidget {
                                         ),
                                       ),
                                     ),
+                                    if (!line.isVoided &&
+                                        showNewItemHighlight &&
+                                        line.hasPendingAdditions)
+                                      const _PendingCartItemBadge(),
                                     if (line.isVoided) const _VoidedCartItemBadge(),
                                     if (!line.isVoided) IconButton(
                                       constraints:

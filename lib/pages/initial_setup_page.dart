@@ -4,6 +4,7 @@ import 'package:fudo_v2/data/api/applicense_api.dart';
 import 'package:fudo_v2/data/api/posmast_api.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
+import 'package:fudo_v2/pages/counter_selection_page.dart';
 import 'package:fudo_v2/pages/login_page.dart';
 
 class StartupGate extends StatefulWidget {
@@ -25,7 +26,7 @@ class _StartupGateState extends State<StartupGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_completedSetup) return const LoginPage();
+    if (_completedSetup) return _buildCounterSelectionPage(context);
 
     return FutureBuilder<bool>(
       future: _setupComplete,
@@ -43,10 +44,22 @@ class _StartupGateState extends State<StartupGate> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.data!) return const LoginPage();
+        if (snapshot.data!) return _buildCounterSelectionPage(context);
 
         return InitialSetupPage(
           onSaved: () => setState(() => _completedSetup = true),
+        );
+      },
+    );
+  }
+
+  Widget _buildCounterSelectionPage(BuildContext context) {
+    return CounterSelectionPage(
+      onSelected: (counterNo) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => LoginPage(selectedCounterNo: counterNo),
+          ),
         );
       },
     );
@@ -133,7 +146,6 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         locationId: locationId,
         clearExistingData: true,
       );
-      await DBManager.completeInitialSetup();
       if (!mounted) return;
       widget.onSaved();
     } catch (error) {

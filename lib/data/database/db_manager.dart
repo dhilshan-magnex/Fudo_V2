@@ -80,30 +80,14 @@ class DBManager {
   static Future<Map<String, dynamic>?> getClientInfo() async {
     final database = await getDatabase(AppDatabase.sys);
     final rows = await database.query('App_License');
-
-    final configuredClientId = await _getSetting(database, 'client_id');
-    if (rows.isEmpty) {
-      if (configuredClientId == null || configuredClientId.isEmpty) return null;
-      return {
-        'Client_ID': configuredClientId,
-        'Client_Name': configuredClientId,
-      };
-    }
-
-    final clientInfo = Map<String, dynamic>.from(rows.first);
-    if (configuredClientId != null && configuredClientId.isNotEmpty) {
-      clientInfo['Client_ID'] = configuredClientId;
-    }
-    return clientInfo;
+    return rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
   }
 
   static Future<bool> isInitialSetupComplete() async {
     final database = await getDatabase(AppDatabase.sys);
-    final setupComplete =
-        await _getSetting(database, 'initial_setup_complete') == '1';
-    final licenseSynced =
-        await _getSetting(database, 'app_license_synced') == '1';
-    return setupComplete && licenseSynced;
+    final licenseRows = await database.query('App_License', limit: 1);
+    final counterRows = await database.query('Counter_Info', limit: 1);
+    return licenseRows.isNotEmpty && counterRows.isNotEmpty;
   }
 
   static Future<void> saveInitialConfiguration({
@@ -119,11 +103,6 @@ class DBManager {
 
     final database = await getDatabase(AppDatabase.sys);
     await database.transaction((txn) async {
-      await txn.insert('App_Setup', {
-        'Setting_Key': 'client_id',
-        'Setting_Value': normalizedClientId,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-
       final existingCounters = await txn.query(
         'Counter_Info',
         columns: ['Counter_No'],
@@ -147,34 +126,6 @@ class DBManager {
     });
   }
 
-  static Future<void> completeInitialSetup() async {
-    final database = await getDatabase(AppDatabase.sys);
-    await database.transaction((txn) async {
-      await txn.insert('App_Setup', {
-        'Setting_Key': 'initial_setup_complete',
-        'Setting_Value': '1',
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-      await txn.insert('App_Setup', {
-        'Setting_Key': 'app_license_synced',
-        'Setting_Value': '1',
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    });
-  }
-
-  static Future<String?> _getSetting(
-    DatabaseExecutor database,
-    String key,
-  ) async {
-    final rows = await database.query(
-      'App_Setup',
-      columns: ['Setting_Value'],
-      where: 'Setting_Key = ?',
-      whereArgs: [key],
-      limit: 1,
-    );
-    return rows.isEmpty ? null : rows.first['Setting_Value']?.toString();
-  }
-
   /// Returns the configured location for the POS counter currently in use.
   static Future<Map<String, dynamic>?> getCounterInfo({
     String counterNo = '01',
@@ -187,6 +138,52 @@ class DBManager {
       limit: 1,
     );
     return rows.isEmpty ? null : rows.first;
+  }
+
+  static Future<List<Map<String, dynamic>>> getCounterInfos() async {
+    final database = await getDatabase(AppDatabase.sys);
+    return database.query('Counter_Info', orderBy: 'Counter_No ASC');
+  }
+
+  static Future<void> registerCounters({
+    required Iterable<String> counterNumbers,
+    required String locationId,
+  }) async {
+    final normalizedLocationId = locationId.trim();
+    final counters = counterNumbers
+        .map((counterNo) => counterNo.trim())
+        .where((counterNo) => counterNo.isNotEmpty)
+        .toSet();
+    if (normalizedLocationId.isEmpty) {
+      throw ArgumentError('Location_ID is required to register counters.');
+    }
+    if (counters.isEmpty) return;
+
+    final database = await getDatabase(AppDatabase.sys);
+    await database.transaction((txn) async {
+      for (final counterNo in counters) {
+        final existing = await txn.query(
+          'Counter_Info',
+          columns: ['Counter_No'],
+          where: 'Counter_No = ?',
+          whereArgs: [counterNo],
+          limit: 1,
+        );
+        if (existing.isEmpty) {
+          await txn.insert('Counter_Info', {
+            'Counter_No': counterNo,
+            'Location_ID': normalizedLocationId,
+          });
+        } else {
+          await txn.update(
+            'Counter_Info',
+            {'Location_ID': normalizedLocationId},
+            where: 'Counter_No = ?',
+            whereArgs: [counterNo],
+          );
+        }
+      }
+    });
   }
 
   static Future<Map<String, dynamic>?> getUserForLogin(
@@ -234,12 +231,7 @@ class DBManager {
     Database database,
   ) async {
     if (dbType == AppDatabase.sys) {
-      await database.execute('''
-        CREATE TABLE IF NOT EXISTS App_Setup (
-          Setting_Key TEXT NOT NULL PRIMARY KEY,
-          Setting_Value TEXT NOT NULL
-        )
-      ''');
+      await database.execute('DROP TABLE IF EXISTS App_Setup');
       return;
     }
 
