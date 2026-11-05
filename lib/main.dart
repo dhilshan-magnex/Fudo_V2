@@ -8,7 +8,7 @@ import 'functions/orders/data/order_repository.dart';
 import 'functions/orders/state/order_provider.dart';
 import 'functions/orderdetails/order_details.dart';
 import 'pages/tables/state/table_layout_provider.dart';
-import 'pages/login_page.dart';
+import 'pages/initial_setup_page.dart';
 import 'data/api/api_http_client.dart';
 import 'data/database/db_manager.dart';
 
@@ -30,9 +30,8 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(
-          create: (_) => OrderProvider(
-            OrderRepository(OrderDatabase(), KotService()),
-          ),
+          create: (_) =>
+              OrderProvider(OrderRepository(OrderDatabase(), KotService())),
         ),
         ChangeNotifierProvider(create: (_) => TableLayoutProvider()),
       ],
@@ -73,7 +72,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const LoginPage(),
+      home: const StartupGate(),
     );
   }
 }

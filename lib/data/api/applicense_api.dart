@@ -17,15 +17,42 @@ class AppLicenseApi {
 
   Future<AppLicenseSyncResult> syncAppLicense({
     String? apiUrl,
+    String? clientId,
+    String? locationId,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final resolvedApiUrl = apiUrl ?? ApiConfig.url(appLicenseEndpoint);
+    if ((clientId == null) != (locationId == null)) {
+      throw ArgumentError(
+        'Client_ID and Location_ID must be supplied together.',
+      );
+    }
+    final resolvedApiUrl =
+        apiUrl ??
+        (clientId != null && locationId != null
+            ? ApiConfig.urlForClient(
+                appLicenseEndpoint,
+                clientId: clientId,
+                locationId: locationId,
+              )
+            : ApiConfig.url(appLicenseEndpoint));
 
     final rows = await _fetchAppLicenseRows(resolvedApiUrl, headers: headers);
 
     if (rows.isEmpty) {
       throw Exception('App License API returned no license rows.');
+    }
+    if (clientId != null) {
+      final requestedClientId = clientId.trim();
+      final returnedClientIds = rows
+          .map((row) => _readValue(row, 'Client_ID')?.toString().trim())
+          .whereType<String>()
+          .toSet();
+      if (!returnedClientIds.contains(requestedClientId)) {
+        throw Exception(
+          'App License API did not return the requested Client_ID.',
+        );
+      }
     }
 
     final result = await saveAppLicenseRows(

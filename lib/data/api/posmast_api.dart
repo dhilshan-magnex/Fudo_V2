@@ -15,13 +15,27 @@ class PosMastApi {
 
   Future<PosMastSyncResult> syncPosMast({
     String? apiUrl,
+    String? clientId,
+    String? locationId,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    final rows = await _fetchRows(
-      apiUrl ?? ApiConfig.url(PosMastApi.posMastEndpoint),
-      headers: headers,
-    );
+    if ((clientId == null) != (locationId == null)) {
+      throw ArgumentError(
+        'Client_ID and Location_ID must be supplied together.',
+      );
+    }
+    final resolvedApiUrl =
+        apiUrl ??
+        (clientId != null && locationId != null
+            ? ApiConfig.urlForClient(
+                posMastEndpoint,
+                clientId: clientId,
+                locationId: locationId,
+              )
+            : ApiConfig.url(posMastEndpoint));
+
+    final rows = await _fetchRows(resolvedApiUrl, headers: headers);
 
     return savePosMastRows(rows, clearExistingData: clearExistingData);
   }

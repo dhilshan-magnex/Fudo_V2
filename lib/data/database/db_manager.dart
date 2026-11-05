@@ -10,8 +10,8 @@ enum DataSource { sqlite, api }
 
 class DataSourceManager {
   static DataSource getDataSource([String? clientType]) {
-    final resolvedClientType =
-        (clientType ?? SessionProvider.currentClientType).trim();
+    final resolvedClientType = (clientType ?? SessionProvider.currentClientType)
+        .trim();
     return switch (resolvedClientType) {
       '1' => DataSource.api,
       '2' => DataSource.sqlite,
@@ -81,9 +81,98 @@ class DBManager {
     final database = await getDatabase(AppDatabase.sys);
     final rows = await database.query('App_License');
 
-    if (rows.isEmpty) return null;
+    final configuredClientId = await _getSetting(database, 'client_id');
+    if (rows.isEmpty) {
+      if (configuredClientId == null || configuredClientId.isEmpty) return null;
+      return {
+        'Client_ID': configuredClientId,
+        'Client_Name': configuredClientId,
+      };
+    }
 
-    return rows.first;
+    final clientInfo = Map<String, dynamic>.from(rows.first);
+    if (configuredClientId != null && configuredClientId.isNotEmpty) {
+      clientInfo['Client_ID'] = configuredClientId;
+    }
+    return clientInfo;
+  }
+
+  static Future<bool> isInitialSetupComplete() async {
+    final database = await getDatabase(AppDatabase.sys);
+    final setupComplete =
+        await _getSetting(database, 'initial_setup_complete') == '1';
+    final licenseSynced =
+        await _getSetting(database, 'app_license_synced') == '1';
+    return setupComplete && licenseSynced;
+  }
+
+  static Future<void> saveInitialConfiguration({
+    required String clientId,
+    required String locationId,
+    String counterNo = '01',
+  }) async {
+    final normalizedClientId = clientId.trim();
+    final normalizedLocationId = locationId.trim();
+    if (normalizedClientId.isEmpty || normalizedLocationId.isEmpty) {
+      throw ArgumentError('Client_ID and Location_ID are required.');
+    }
+
+    final database = await getDatabase(AppDatabase.sys);
+    await database.transaction((txn) async {
+      await txn.insert('App_Setup', {
+        'Setting_Key': 'client_id',
+        'Setting_Value': normalizedClientId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      final existingCounters = await txn.query(
+        'Counter_Info',
+        columns: ['Counter_No'],
+        where: 'Counter_No = ?',
+        whereArgs: [counterNo],
+        limit: 1,
+      );
+      if (existingCounters.isEmpty) {
+        await txn.insert('Counter_Info', {
+          'Counter_No': counterNo,
+          'Location_ID': normalizedLocationId,
+        });
+      } else {
+        await txn.update(
+          'Counter_Info',
+          {'Location_ID': normalizedLocationId},
+          where: 'Counter_No = ?',
+          whereArgs: [counterNo],
+        );
+      }
+    });
+  }
+
+  static Future<void> completeInitialSetup() async {
+    final database = await getDatabase(AppDatabase.sys);
+    await database.transaction((txn) async {
+      await txn.insert('App_Setup', {
+        'Setting_Key': 'initial_setup_complete',
+        'Setting_Value': '1',
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('App_Setup', {
+        'Setting_Key': 'app_license_synced',
+        'Setting_Value': '1',
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  static Future<String?> _getSetting(
+    DatabaseExecutor database,
+    String key,
+  ) async {
+    final rows = await database.query(
+      'App_Setup',
+      columns: ['Setting_Value'],
+      where: 'Setting_Key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['Setting_Value']?.toString();
   }
 
   /// Returns the configured location for the POS counter currently in use.
@@ -144,14 +233,24 @@ class DBManager {
     AppDatabase dbType,
     Database database,
   ) async {
-    if (dbType != AppDatabase.fudo) return;
+    if (dbType == AppDatabase.sys) {
+      await database.execute('''
+        CREATE TABLE IF NOT EXISTS App_Setup (
+          Setting_Key TEXT NOT NULL PRIMARY KEY,
+          Setting_Value TEXT NOT NULL
+        )
+      ''');
+      return;
+    }
 
     final columns = await database.rawQuery('PRAGMA table_info(Tran_Header)');
     final hasBillTime = columns.any(
       (column) => column['name']?.toString() == 'Bill_Time',
     );
     if (!hasBillTime) {
-      await database.execute('ALTER TABLE Tran_Header ADD COLUMN Bill_Time TEXT');
+      await database.execute(
+        'ALTER TABLE Tran_Header ADD COLUMN Bill_Time TEXT',
+      );
     }
   }
 
