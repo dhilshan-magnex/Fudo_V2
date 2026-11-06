@@ -145,6 +145,43 @@ class DBManager {
     return database.query('Counter_Info', orderBy: 'Counter_No ASC');
   }
 
+  static Future<void> saveSelectedCounterInfo(
+    Map<String, dynamic> counterInfo,
+  ) async {
+    final counterNo = counterInfo['Counter_No']?.toString().trim() ?? '';
+    final locationId = counterInfo['Location_ID']?.toString().trim() ?? '';
+    if (counterNo.isEmpty || locationId.isEmpty) {
+      throw ArgumentError(
+        'The selected counter is missing required information.',
+      );
+    }
+
+    final database = await getDatabase(AppDatabase.sys);
+    final existing = await database.query(
+      'Counter_Info',
+      columns: ['Counter_No'],
+      where: 'Counter_No = ?',
+      whereArgs: [counterNo],
+      limit: 1,
+    );
+    final values = {
+      'Counter_No': counterNo,
+      'Location_ID': locationId,
+      if (counterInfo['POS_ID'] != null) 'POS_ID': counterInfo['POS_ID'],
+    };
+
+    if (existing.isEmpty) {
+      await database.insert('Counter_Info', values);
+    } else {
+      await database.update(
+        'Counter_Info',
+        values..remove('Counter_No'),
+        where: 'Counter_No = ?',
+        whereArgs: [counterNo],
+      );
+    }
+  }
+
   static Future<void> registerCounters({
     required Iterable<String> counterNumbers,
     required String locationId,

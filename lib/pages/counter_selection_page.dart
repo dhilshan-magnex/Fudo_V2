@@ -16,6 +16,7 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
   String? _selectedCounterNo;
   String? _error;
   bool _loading = true;
+  bool _savingSelection = false;
 
   @override
   void initState() {
@@ -42,6 +43,28 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
         _error = error.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _continueWithSelectedCounter() async {
+    final counterNo = _selectedCounterNo;
+    if (counterNo == null) return;
+
+    setState(() => _savingSelection = true);
+    try {
+      final selectedCounter = _counters.firstWhere(
+        (counter) => counter['Counter_No']?.toString() == counterNo,
+      );
+      await DBManager.saveSelectedCounterInfo(selectedCounter);
+      if (!mounted) return;
+      widget.onSelected(counterNo);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save selected counter: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _savingSelection = false);
     }
   }
 
@@ -110,9 +133,10 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _selectedCounterNo == null
+                        onPressed:
+                            _selectedCounterNo == null || _savingSelection
                             ? null
-                            : () => widget.onSelected(_selectedCounterNo!),
+                            : _continueWithSelectedCounter,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: GlobalColors.homeActionBackground,
                           foregroundColor: Colors.white,
@@ -120,7 +144,15 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
                               .homeActionBackground
                               .withValues(alpha: 0.45),
                         ),
-                        child: const Text('Continue to sign in'),
+                        child: _savingSelection
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Continue to sign in'),
                       ),
                     ),
                   ],

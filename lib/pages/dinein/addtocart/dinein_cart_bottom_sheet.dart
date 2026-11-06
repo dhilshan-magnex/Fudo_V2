@@ -440,9 +440,6 @@ Future<void> _showDineInCart(
           existingQuantity: line.quantity,
         );
       });
-      // The quantity update has already been saved. Return to the Billing
-      // route that opened this editor instead of running full order
-      // confirmation again (which could also create/add pending items).
       if (context.mounted) Navigator.of(context).pop(true);
     }
     return;
