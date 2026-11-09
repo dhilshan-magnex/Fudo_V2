@@ -17,6 +17,7 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate> {
   late Future<bool> _setupComplete;
   bool _completedSetup = false;
+  List<Map<String, dynamic>>? _setupCounters;
 
   @override
   void initState() {
@@ -47,7 +48,10 @@ class _StartupGateState extends State<StartupGate> {
         if (snapshot.data!) return _buildCounterSelectionPage(context);
 
         return InitialSetupPage(
-          onSaved: () => setState(() => _completedSetup = true),
+          onSaved: (counters) => setState(() {
+            _setupCounters = counters;
+            _completedSetup = true;
+          }),
         );
       },
     );
@@ -55,6 +59,7 @@ class _StartupGateState extends State<StartupGate> {
 
   Widget _buildCounterSelectionPage(BuildContext context) {
     return CounterSelectionPage(
+      initialCounters: _setupCounters,
       onSelected: (counterNo) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
@@ -69,7 +74,7 @@ class _StartupGateState extends State<StartupGate> {
 class InitialSetupPage extends StatefulWidget {
   const InitialSetupPage({required this.onSaved, super.key});
 
-  final VoidCallback onSaved;
+  final ValueChanged<List<Map<String, dynamic>>> onSaved;
 
   @override
   State<InitialSetupPage> createState() => _InitialSetupPageState();
@@ -79,9 +84,13 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
   final _formKey = GlobalKey<FormState>();
   final _clientIdController = TextEditingController();
   final _locationIdController = TextEditingController();
+  final _nodeApiController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
+  List<Map<String, dynamic>>? _setupRows;
+  String? _setupClientType;
+  String? _setupLocationId;
 
   @override
   void initState() {
@@ -91,16 +100,21 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
 
   Future<void> _loadExistingValues() async {
     try {
-      final values = await Future.wait([
+      final values = await Future.wait<Object?>([
         DBManager.getClientInfo(),
         DBManager.getCounterInfo(),
+        DBManager.getAppConfig('POS_PRINTER_API_BASE_URL'),
       ]);
       if (!mounted) return;
-      final clientInfo = values[0];
-      final counterInfo = values[1];
+      final clientInfo = values[0] as Map<String, dynamic>?;
+      final counterInfo = values[1] as Map<String, dynamic>?;
       _clientIdController.text = clientInfo?['Client_ID']?.toString() ?? '';
       _locationIdController.text =
           counterInfo?['Location_ID']?.toString() ?? '';
+      _nodeApiController.text = (values[2]?.toString() ?? '').replaceFirst(
+        RegExp(r'^http://', caseSensitive: false),
+        '',
+      );
       setState(() => _loading = false);
     } catch (error) {
       if (!mounted) return;
@@ -115,6 +129,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
   void dispose() {
     _clientIdController.dispose();
     _locationIdController.dispose();
+    _nodeApiController.dispose();
     super.dispose();
   }
 
@@ -122,6 +137,26 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
+      if (_setupRows != null) {
+        await DBManager.saveAppConfig(
+          'POS_PRINTER_API_BASE_URL',
+          _nodeApiBaseUrl(_nodeApiController.text),
+        );
+        final api = PosMastApi();
+        if (_setupClientType == '2') {
+          await api.savePosMastRowsOnServer(_setupRows!);
+        } else {
+          await api.savePosMastRows(_setupRows!, clearExistingData: true);
+        }
+        if (!mounted) return;
+        widget.onSaved(
+          _setupRows!
+              .where((row) => row['Counter_No'] != null)
+              .map((row) => {...row, 'Location_ID': _setupLocationId})
+              .toList(),
+        );
+        return;
+      }
       final clientId = _clientIdController.text.trim();
       final locationId = _locationIdController.text.trim();
       final isValid = await ValidUserApi().isValidClientLocation(
@@ -132,22 +167,33 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         throw StateError('Client ID or Location ID is invalid.');
       }
 
-      await DBManager.saveInitialConfiguration(
-        clientId: clientId,
-        locationId: locationId,
-      );
-      await AppLicenseApi().syncAppLicense(
+      final licenseResult = await AppLicenseApi().syncAppLicense(
         clientId: clientId,
         locationId: locationId,
         clearExistingData: true,
       );
-      await PosMastApi().syncPosMast(
+      if (licenseResult.savedCount == 0) {
+        throw StateError('App License API returned no valid license data.');
+      }
+      final clientInfo = await DBManager.getClientInfo();
+      final clientType = clientInfo?['Client_Type']?.toString().trim();
+      if (clientType != '1' && clientType != '2') {
+        throw StateError('App license has an unsupported Client_Type.');
+      }
+      final rows = await PosMastApi().fetchPosMast(
         clientId: clientId,
         locationId: locationId,
-        clearExistingData: true,
       );
+      if (rows.isEmpty) {
+        throw StateError('POS_Mast API returned no counters to select.');
+      }
       if (!mounted) return;
-      widget.onSaved();
+      setState(() {
+        _setupRows = rows;
+        _setupClientType = clientType;
+        _setupLocationId = locationId;
+        _saving = false;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -221,43 +267,64 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'Set up this device',
+                            Text(
+                              _setupRows == null
+                                  ? 'Set up this device'
+                                  : 'Set API address',
                               style: TextStyle(
                                 color: GlobalColors.secondaryText,
                                 fontSize: 16,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'We’ll validate these IDs and download your license details.',
+                            Text(
+                              _setupRows == null
+                                  ? 'We will validate these IDs and download your license and counter details.'
+                                  : 'Enter the API IP address to finish setup.',
                               style: TextStyle(
                                 color: GlobalColors.secondaryText,
                                 fontSize: 13,
                               ),
                             ),
                             const SizedBox(height: 28),
-                            TextFormField(
-                              controller: _clientIdController,
-                              textInputAction: TextInputAction.next,
-                              decoration: const InputDecoration(
-                                labelText: 'Client ID',
-                                hintText: 'Enter your Client_ID',
-                                prefixIcon: Icon(Icons.business_outlined),
+                            if (_setupRows == null) ...[
+                              TextFormField(
+                                enabled: !_saving,
+                                controller: _clientIdController,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'Client ID',
+                                  hintText: 'Enter your Client_ID',
+                                  prefixIcon: Icon(Icons.business_outlined),
+                                ),
+                                validator: _requiredValue,
                               ),
-                              validator: _requiredValue,
-                            ),
-                            const SizedBox(height: 18),
-                            TextFormField(
-                              controller: _locationIdController,
-                              textInputAction: TextInputAction.done,
-                              decoration: const InputDecoration(
-                                labelText: 'Location ID',
-                                hintText: 'Enter your Location_ID',
-                                prefixIcon: Icon(Icons.location_on_outlined),
+                              const SizedBox(height: 18),
+                              TextFormField(
+                                enabled: !_saving,
+                                controller: _locationIdController,
+                                textInputAction: TextInputAction.done,
+                                decoration: const InputDecoration(
+                                  labelText: 'Location ID',
+                                  hintText: 'Enter your Location_ID',
+                                  prefixIcon: Icon(Icons.location_on_outlined),
+                                ),
+                                validator: _requiredValue,
                               ),
-                              validator: _requiredValue,
-                            ),
+                            ] else
+                              TextFormField(
+                                key: const ValueKey('apiAddress'),
+                                enabled: !_saving,
+                                controller: _nodeApiController,
+                                keyboardType: TextInputType.url,
+                                textInputAction: TextInputAction.done,
+                                decoration: const InputDecoration(
+                                  labelText: 'API IP address',
+                                  hintText: '192.168.x.xxx:xxx',
+                                  prefixIcon: Icon(Icons.dns_outlined),
+                                ),
+                                validator: _validateNodeApiAddress,
+                              ),
                             const SizedBox(height: 28),
                             SizedBox(
                               height: 52,
@@ -276,7 +343,11 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Text('Save and continue'),
+                                    : Text(
+                                        _setupRows == null
+                                            ? 'Continue'
+                                            : 'Save and continue',
+                                      ),
                               ),
                             ),
                           ],
@@ -292,6 +363,24 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
 
   String? _requiredValue(String? value) =>
       value == null || value.trim().isEmpty ? 'This field is required' : null;
+
+  String _nodeApiBaseUrl(String value) {
+    final address = value.trim().replaceFirst(RegExp(r'/+$'), '');
+    return address.contains('://') ? address : 'http://$address';
+  }
+
+  String? _validateNodeApiAddress(String? value) {
+    final required = _requiredValue(value);
+    if (required != null) return required;
+    final uri = Uri.tryParse(_nodeApiBaseUrl(value!));
+    if (uri == null ||
+        !uri.hasAuthority ||
+        uri.host.isEmpty ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return 'Enter an IP address like 192.168.1.60:81';
+    }
+    return null;
+  }
 }
 
 class _StartupError extends StatelessWidget {

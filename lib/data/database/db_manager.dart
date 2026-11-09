@@ -90,42 +90,6 @@ class DBManager {
     return licenseRows.isNotEmpty && counterRows.isNotEmpty;
   }
 
-  static Future<void> saveInitialConfiguration({
-    required String clientId,
-    required String locationId,
-    String counterNo = '01',
-  }) async {
-    final normalizedClientId = clientId.trim();
-    final normalizedLocationId = locationId.trim();
-    if (normalizedClientId.isEmpty || normalizedLocationId.isEmpty) {
-      throw ArgumentError('Client_ID and Location_ID are required.');
-    }
-
-    final database = await getDatabase(AppDatabase.sys);
-    await database.transaction((txn) async {
-      final existingCounters = await txn.query(
-        'Counter_Info',
-        columns: ['Counter_No'],
-        where: 'Counter_No = ?',
-        whereArgs: [counterNo],
-        limit: 1,
-      );
-      if (existingCounters.isEmpty) {
-        await txn.insert('Counter_Info', {
-          'Counter_No': counterNo,
-          'Location_ID': normalizedLocationId,
-        });
-      } else {
-        await txn.update(
-          'Counter_Info',
-          {'Location_ID': normalizedLocationId},
-          where: 'Counter_No = ?',
-          whereArgs: [counterNo],
-        );
-      }
-    });
-  }
-
   /// Returns the configured location for the POS counter currently in use.
   static Future<Map<String, dynamic>?> getCounterInfo({
     String counterNo = '01',
@@ -269,6 +233,12 @@ class DBManager {
   ) async {
     if (dbType == AppDatabase.sys) {
       await database.execute('DROP TABLE IF EXISTS App_Setup');
+      await database.execute('''
+        CREATE TABLE IF NOT EXISTS App_Config (
+          Config_Key TEXT PRIMARY KEY,
+          Config_Value TEXT NOT NULL
+        )
+      ''');
       return;
     }
 
@@ -281,6 +251,31 @@ class DBManager {
         'ALTER TABLE Tran_Header ADD COLUMN Bill_Time TEXT',
       );
     }
+  }
+
+  static Future<void> saveAppConfig(String key, String value) async {
+    final normalizedKey = key.trim();
+    if (normalizedKey.isEmpty) {
+      throw ArgumentError('Config key cannot be empty.');
+    }
+    final database = await getDatabase(AppDatabase.sys);
+    await database.insert(
+      'App_Config',
+      {'Config_Key': normalizedKey, 'Config_Value': value.trim()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<String?> getAppConfig(String key) async {
+    final database = await getDatabase(AppDatabase.sys);
+    final rows = await database.query(
+      'App_Config',
+      columns: ['Config_Value'],
+      where: 'Config_Key = ?',
+      whereArgs: [key.trim()],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['Config_Value']?.toString();
   }
 
   static Future<void> _refreshInvalidDatabase(

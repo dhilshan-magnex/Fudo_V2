@@ -3,9 +3,14 @@ import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
 
 class CounterSelectionPage extends StatefulWidget {
-  const CounterSelectionPage({required this.onSelected, super.key});
+  const CounterSelectionPage({
+    required this.onSelected,
+    this.initialCounters,
+    super.key,
+  });
 
   final ValueChanged<String> onSelected;
+  final List<Map<String, dynamic>>? initialCounters;
 
   @override
   State<CounterSelectionPage> createState() => _CounterSelectionPageState();
@@ -30,7 +35,7 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
       _error = null;
     });
     try {
-      final counters = await DBManager.getCounterInfos();
+      final counters = widget.initialCounters ?? await _loadSavedCounters();
       if (!mounted) return;
       setState(() {
         _counters = counters;
@@ -44,6 +49,21 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
         _loading = false;
       });
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadSavedCounters() async {
+    final saved = await DBManager.getCounterInfos();
+    if (saved.isNotEmpty) return saved;
+
+    // Existing setups may have POS_Mast cached locally from earlier versions.
+    final database = await DBManager.getDatabase(AppDatabase.fudo);
+    final clientInfo = await DBManager.getClientInfo();
+    final locationId = clientInfo?['Location_ID']?.toString() ?? '';
+    return database.query('POS_Mast').then(
+      (rows) => rows
+          .map((row) => {...row, 'Location_ID': locationId})
+          .toList(),
+    );
   }
 
   Future<void> _continueWithSelectedCounter() async {

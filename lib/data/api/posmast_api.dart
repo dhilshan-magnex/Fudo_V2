@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/config/api_config.dart';
 import '../../core/session/session_provider.dart';
 import '../database/db_manager.dart';
+import '../server/posprinter_api.dart';
 
 class PosMastApi {
   PosMastApi({http.Client? client})
@@ -14,12 +15,29 @@ class PosMastApi {
 
   final http.Client _client;
 
+  Future<List<Map<String, dynamic>>> fetchPosMast({
+    required String clientId,
+    required String locationId,
+  }) async {
+    final rows = await _fetchRows(
+      ApiConfig.urlForClient(
+        posMastEndpoint,
+        clientId: clientId,
+        locationId: locationId,
+      ),
+    );
+    return rows.map((row) => {...row, ..._normalizeRow(row)}).toList();
+  }
+
   Future<PosMastSyncResult> syncPosMast({
     String? apiUrl,
     String? clientId,
     String? locationId,
     Map<String, String>? headers,
     bool clearExistingData = false,
+    String? clientType,
+    PosPrinterApi? serverApi,
+    bool registerCounters = true,
   }) async {
     if ((clientId == null) != (locationId == null)) {
       throw ArgumentError(
@@ -38,20 +56,77 @@ class PosMastApi {
 
     final rows = await _fetchRows(resolvedApiUrl, headers: headers);
 
-    final syncResult = await savePosMastRows(
-      rows,
-      clearExistingData: clearExistingData,
-    );
-    final resolvedLocationId = locationId ?? SessionProvider.currentLocationId;
-    final counterNumbers = rows
-        .map((row) => _readValue(row, 'Counter_No')?.toString() ?? '')
-        .toSet();
-    await DBManager.registerCounters(
-      counterNumbers: counterNumbers,
-      locationId: resolvedLocationId,
-    );
+    final resolvedClientType = (clientType ?? SessionProvider.currentClientType)
+        .trim();
+    final syncResult = switch (resolvedClientType) {
+      '1' => await savePosMastRows(rows, clearExistingData: clearExistingData),
+      '2' => await savePosMastRowsOnServer(rows, serverApi: serverApi),
+      _ => throw StateError(
+        'Unsupported Client_Type "$resolvedClientType" for POS_Mast.',
+      ),
+    };
+    if (registerCounters) {
+      final resolvedLocationId =
+          locationId ?? SessionProvider.currentLocationId;
+      final counterNumbers = rows
+          .map((row) => _readValue(row, 'Counter_No')?.toString() ?? '')
+          .toSet();
+      await DBManager.registerCounters(
+        counterNumbers: counterNumbers,
+        locationId: resolvedLocationId,
+      );
+    }
 
-    return syncResult;
+    return PosMastSyncResult(
+      savedCount: syncResult.savedCount,
+      rows: rows.map(_normalizeRow).toList(),
+    );
+  }
+
+  /// Sends fetched POS_Mast rows to the Node API for persistence in its
+  /// Configure [serverSaveUrl] with the POST endpoint that
+  /// accepts `{ "data": [...] }`.
+  Future<PosMastSyncResult> savePosMastRowsOnServer(
+    List<Map<String, dynamic>> rows, {
+    PosPrinterApi? serverApi,
+  }) async {
+    final savedBaseUrl = await DBManager.getAppConfig(
+      'POS_PRINTER_API_BASE_URL',
+    );
+    final api =
+        serverApi ?? PosPrinterApi(client: _client, baseUrl: savedBaseUrl);
+    var savedCount = 0;
+    for (final row in rows) {
+      final counterNo = _readValue(row, 'Counter_No')?.toString().trim() ?? '';
+      final counterName =
+          _readValue(row, 'Counter_Name')?.toString().trim() ?? '';
+      final receiptCode =
+          _readValue(row, 'Receipt_Code')?.toString().trim().isNotEmpty == true
+          ? _readValue(row, 'Receipt_Code').toString().trim()
+          : _readValue(row, 'Receipt_Prn_Code')?.toString().trim() ?? '';
+      if (counterNo.isEmpty || counterName.isEmpty || receiptCode.isEmpty) {
+        continue;
+      }
+      final existingRows = await api.getPos(counterNo);
+      if (existingRows.any(
+        (existing) =>
+            _readValue(existing, 'Counter_No')?.toString().trim() == counterNo,
+      )) {
+        savedCount++;
+        continue;
+      }
+      await api.createPos(
+        counterNo: counterNo,
+        counterName: counterName,
+        receiptCode: receiptCode,
+        cashDrawerCode: _readValue(row, 'Cash_Drawer_Code')?.toString(),
+        customerDisplayCode:
+            _readValue(row, 'Cus_Display_Code')?.toString() ??
+            _readValue(row, 'Customer_Display_Code')?.toString(),
+      );
+      savedCount++;
+    }
+    return PosMastSyncResult(savedCount: savedCount);
   }
 
   Future<List<Map<String, dynamic>>> _fetchRows(
@@ -246,7 +321,8 @@ class PosMastPayload {
 }
 
 class PosMastSyncResult {
-  const PosMastSyncResult({required this.savedCount});
+  const PosMastSyncResult({required this.savedCount, this.rows = const []});
 
   final int savedCount;
+  final List<Map<String, dynamic>> rows;
 }
