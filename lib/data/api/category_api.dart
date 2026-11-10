@@ -25,11 +25,6 @@ class CategoryApi {
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
-    //debugPrint('========================================');
-    //debugPrint('CATEGORY SYNC STARTED');
-    //debugPrint('========================================');
-
-    // Fetch the category-level endpoints in parallel.
     final results = await Future.wait([
       _fetchCategoryRows(
         categoryLvl1Url ?? ApiConfig.url(CategoryApi.categoryLvl1Endpoint),
@@ -58,8 +53,6 @@ class CategoryApi {
     return result;
   }
 
-  // FETCH API DATA
-
   Future<List<Map<String, dynamic>>> _fetchCategoryRows(
     String apiUrl, {
     Map<String, String>? headers,
@@ -76,12 +69,7 @@ class CategoryApi {
 
     stopwatch.stop();
 
-    debugPrint('STATUS: ${response.statusCode}');
-
-    debugPrint('TIME: ${stopwatch.elapsedMilliseconds} ms');
-
-    debugPrint('RESPONSE LENGTH: ${response.body.length}');
-
+   
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'Category API failed.\n'
@@ -105,19 +93,12 @@ class CategoryApi {
     return rows;
   }
 
-  // SAVE DATA TO SQLITE
-
+  
   Future<CategorySyncResult> saveCategories(
     CategoryPayload payload, {
     bool clearExistingData = false,
   }) async {
     final db = await DBManager.getDatabase(AppDatabase.fudo);
-
-    debugPrint('Level 1 rows: ${payload.categoryLvl1.length}');
-
-    debugPrint('Level 2 rows: ${payload.categoryLvl2.length}');
-
-    debugPrint('Level 3 rows: ${payload.categoryLvl3.length}');
 
     return db.transaction((txn) async {
       if (clearExistingData) {
@@ -165,16 +146,13 @@ class CategoryApi {
     });
   }
 
-  // CLEAR CATEGORY TABLES
-
+ 
   Future<void> _clearCategoryTables(Transaction txn) async {
     await txn.delete('Category_Lvl3');
     await txn.delete('Category_Lvl2');
     await txn.delete('Category_Lvl1');
     await txn.delete('Category_Type');
   }
-
-  // INSERT / UPDATE ROWS
 
   Future<int> _upsertRows(
     Transaction txn, {
@@ -210,7 +188,6 @@ class CategoryApi {
     return savedCount;
   }
 
-  // NORMALIZE ROW
 
   Map<String, dynamic> _normalizeRow(
     Map<String, dynamic> row,
@@ -228,8 +205,6 @@ class CategoryApi {
 
     return normalizedRow;
   }
-
-  // READ VALUE
 
   dynamic _readValue(Map<String, dynamic> row, String columnName) {
     if (row.containsKey(columnName)) {
@@ -251,13 +226,10 @@ class CategoryApi {
     return value
         .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
         .toLowerCase()
-        // Some category API versions use `Lvl` while the local schema uses
-        // `Lv` (for example, Cat_Lvl2_Code vs Cat_Lv2_Code).
         .replaceAll('lvl', 'lv');
   }
 }
 
-// CATEGORY PAYLOAD
 
 class CategoryPayload {
   const CategoryPayload({
@@ -327,8 +299,6 @@ class CategoryPayload {
     return const [];
   }
 
-  // UNWRAP JSON
-
   static dynamic _unwrapRoot(dynamic json) {
     var current = json;
 
@@ -349,7 +319,6 @@ class CategoryPayload {
     return current;
   }
 
-  // LIST → ROWS
 
   static List<Map<String, dynamic>> _asRows(dynamic value) {
     if (value is! List) {
@@ -362,8 +331,6 @@ class CategoryPayload {
         .toList();
   }
 }
-
-// SYNC RESULT
 
 class CategorySyncResult {
   const CategorySyncResult({

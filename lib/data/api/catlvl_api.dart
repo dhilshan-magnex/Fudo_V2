@@ -114,9 +114,6 @@ class CatLvlApi {
 
       if (!hasRequiredColumns) continue;
 
-      // Insert rows that do not yet exist, then update only the language
-      // fields for existing rows. `replace` would delete Cat_Name while
-      // saving Cat_Name2/Cat_Lv2_Name2.
       await txn.insert(
         tableName,
         normalizedRow,
@@ -154,9 +151,6 @@ class CatLvlApi {
 
   dynamic _readValue(Map<String, dynamic> row, String columnName) {
     if (row.containsKey(columnName)) return row[columnName];
-
-    // The language endpoints provide the translated name as `Cat_Name` /
-    // `Cat_Lv2_Name`. Store those values in the matching *Name2 columns.
     final apiColumnNames = switch (columnName) {
       'Cat_Name2' => const ['Cat_Name'],
       'Cat_Lv2_Name2' => const [
@@ -174,9 +168,6 @@ class CatLvlApi {
       }
     }
 
-    // API JSON uses lowercase/snake-case keys, for example `cat_name` and
-    // `cat_lv2_name`; resolve the aliases using the same normalization used
-    // for regular database columns.
     for (final apiColumnName in apiColumnNames) {
       final normalizedApiColumnName = _normalizeKey(apiColumnName);
       for (final entry in row.entries) {

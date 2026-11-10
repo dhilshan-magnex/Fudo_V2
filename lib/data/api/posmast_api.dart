@@ -1,3 +1,4 @@
+import 'package:fudo_v2/core/config/server_settings.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_http_client.dart';
@@ -90,9 +91,7 @@ class PosMastApi {
     List<Map<String, dynamic>> rows, {
     PosPrinterApi? serverApi,
   }) async {
-    final savedBaseUrl = await DBManager.getAppConfig(
-      'POS_PRINTER_API_BASE_URL',
-    );
+    final savedBaseUrl = await ServerSettings.getBaseUrl();
     final api =
         serverApi ?? PosPrinterApi(client: _client, baseUrl: savedBaseUrl);
     var savedCount = 0;

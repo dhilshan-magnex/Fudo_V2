@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fudo_v2/core/config/server_settings.dart';
+import 'package:fudo_v2/data/server/users_api.dart';
 import 'package:fudo_v2/functions/uservalidation/access_control_service.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
@@ -20,12 +22,15 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
 
   bool _isSyncing = false;
   bool _syncComplete = false;
+  bool _syncFailed = false;
 
-  String _message = 'Do you want to synchronize categories now?';
+  String _message = 'Do you want to synchronize data now?';
 
   static const _syncErrorCode = 'SYNC-001';
 
-  String _syncFailureMessage() => 'Error code: $_syncErrorCode';
+  String _syncFailureMessage(Object error) => error is ApiSyncException
+      ? error.toString()
+      : 'Error code: $_syncErrorCode\n$error';
 
   Future<void> _showPermissionDeniedDialog() {
     return showDialog<void>(
@@ -71,14 +76,34 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _isSyncing = true;
       _syncComplete = false;
+      _syncFailed = false;
       _progress = null;
       _message = 'Starting data synchronization...';
     });
 
     try {
+      final serverAddress = await ServerSettings.getBaseUrl();
+      if (!mounted) return;
+      if (serverAddress == null) {
+        final saved = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const _SyncServerDialog(),
+        );
+        if (!mounted) return;
+        if (saved != true) {
+          setState(() {
+            _isSyncing = false;
+            _progress = 0;
+            _message = 'Set the API server address to synchronize data.';
+          });
+          return;
+        }
+      }
       final result = await ApiRouteRegistry.syncAll(
         // A manual Data Sync is a full refresh: remove records that are no
         // longer returned by the server before saving this sync's data.
@@ -118,6 +143,12 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
             'Menu Items: ${result.menuItems.savedCount}\n'
             'More Sizes: ${result.moreSizes.savedCount}\n'
             'POS Master: ${result.posMast.savedCount}\n'
+            'Users: ${result.users}\n'
+            'User Groups: ${result.userGroups}\n'
+            'User Setup: ${result.userSetup}\n'
+            'Printers: ${result.printers}\n'
+            'Customer Displays: ${result.customerDisplays}\n'
+            'Cash Drawers: ${result.cashDrawers}\n'
             'Sections: ${result.sections.savedCount}\n'
             'Shop Info: ${result.shopInfo.savedCount}\n'
             'Side Items: ${result.sideItems.savedCount}\n'
@@ -125,7 +156,7 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
             'Tax Groups: ${result.taxGroups.savedCount}\n'
             'Tax Master: ${result.taxMaster.savedCount}';
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -133,9 +164,10 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
       setState(() {
         _isSyncing = false;
         _syncComplete = false;
+        _syncFailed = true;
         _progress = 0;
 
-        _message = _syncFailureMessage();
+        _message = _syncFailureMessage(error);
       });
     }
   }
@@ -252,7 +284,9 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
                         Text(
                           _isSyncing
                               ? 'Synchronizing...'
-                              : (_syncComplete ? 'Completed' : 'Ready'),
+                              : (_syncComplete
+                                    ? 'Completed'
+                                    : (_syncFailed ? 'Failed' : 'Ready')),
                           style: TextStyle(
                             color: const Color(0xFFAFBFC4),
                             fontSize: isTablet ? 13 : 12,
@@ -358,6 +392,127 @@ class _DataSyncDialogState extends State<DataSyncDialog> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SyncServerDialog extends StatefulWidget {
+  const _SyncServerDialog();
+
+  @override
+  State<_SyncServerDialog> createState() => _SyncServerDialogState();
+}
+
+class _SyncServerDialogState extends State<_SyncServerDialog> {
+  final _controller = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _baseUrl(String value) {
+    final address = value.trim().replaceFirst(RegExp(r'/+$'), '');
+    final url = address.contains('://') ? address : 'http://$address';
+    // The API clients append /api themselves.
+    return url.replaceFirst(RegExp(r'/api$', caseSensitive: false), '');
+  }
+
+  Future<void> _save() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final address = _baseUrl(_controller.text);
+      await UsersApi(baseUrl: address).getUsers();
+      await ServerSettings.saveBaseUrl(address);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error =
+            'Could not connect or save the address. Check the server '
+            'address and port, then retry.\n$error';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_saving,
+      child: AlertDialog(
+        title: const Text('Configure API server'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter the address of your running API server to '
+                  'continue Data Sync.',
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _controller,
+                  enabled: !_saving,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'API IP address',
+                    hintText: '192.168.1.100:3000',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Enter the server address and port.';
+                    }
+                    final uri = Uri.tryParse(_baseUrl(value));
+                    if (uri == null ||
+                        !['http', 'https'].contains(uri.scheme) ||
+                        uri.host.isEmpty ||
+                        uri.host.contains(RegExp(r'\s')) ||
+                        uri.hasQuery ||
+                        uri.hasFragment ||
+                        uri.userInfo.isNotEmpty) {
+                      return 'Enter a valid HTTP or HTTPS server address.';
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (_) => _save(),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: Text(_saving ? 'Connecting...' : 'Save and sync'),
+          ),
+        ],
       ),
     );
   }

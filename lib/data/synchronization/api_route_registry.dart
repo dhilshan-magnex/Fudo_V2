@@ -1,3 +1,7 @@
+import '../server/posprinter_api.dart';
+import '../server/usersetup_api.dart';
+import '../server/customerdisplay_api.dart';
+import '../server/cashdrawer_api.dart';
 import 'dart:developer' as developer;
 
 import '../api/applicense_api.dart';
@@ -16,13 +20,14 @@ import '../api/tablelayout_api.dart';
 import '../api/taxgroup_api.dart';
 import '../api/taxmaster_api.dart';
 import '../database/db_manager.dart';
+import '../server/users_api.dart';
 
 typedef ApiSyncProgressHandler = void Function(ApiSyncProgress progress);
 
 class ApiRouteRegistry {
   static const Duration syncTimeout = Duration(minutes: 2);
 
-  static const int totalSyncCount = 15;
+  static const int totalSyncCount = 21;
 
   static Future<void> syncTable(
     AppDatabase dbType,
@@ -39,6 +44,35 @@ class ApiRouteRegistry {
         .toLowerCase();
 
     switch (normalizedKey) {
+      case 'usersetup':
+        await UserSetupApi().syncUserSetup(
+          clearExistingData: clearExistingData,
+        );
+        return;
+      case 'printmast':
+      case 'printermast':
+        await PosPrinterApi().syncPrinters(
+          clearExistingData: clearExistingData,
+        );
+        return;
+      case 'usergroup':
+        await UserSetupApi().syncUserGroups(
+          clearExistingData: clearExistingData,
+        );
+        return;
+      case 'customerdisplay':
+        await CustomerDisplayApi().syncCustomerDisplays(
+          clearExistingData: clearExistingData,
+        );
+        return;
+      case 'cashdrawer':
+        await CashDrawerApi().syncCashDrawers(
+          clearExistingData: clearExistingData,
+        );
+        return;
+      case 'userfile':
+        await UsersApi().syncUsers();
+        return;
       case 'applicense':
         await AppLicenseApi().syncAppLicense(
           clearExistingData: clearExistingData,
@@ -137,11 +171,13 @@ class ApiRouteRegistry {
     bool clearExistingData = false,
   }) async {
     var completedCount = 0;
+    var currentTable = 'Data Sync';
 
     Future<void> reportProgress(
       String tableName, {
       bool isCompleted = false,
     }) async {
+      currentTable = tableName;
       onProgress?.call(
         ApiSyncProgress(
           completedCount: completedCount,
@@ -283,6 +319,41 @@ class ApiRouteRegistry {
       // 10. SECTION MASTER
       // --------------------------------------------------
 
+      await reportProgress('Users');
+      final usersResult = await UsersApi().syncUsers().timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('Users');
+      await reportProgress('User Groups');
+      final userGroupsResult = await UserSetupApi()
+          .syncUserGroups(clearExistingData: clearExistingData)
+          .timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('User Groups');
+      await reportProgress('User Setup');
+      final userSetupResult = await UserSetupApi()
+          .syncUserSetup(clearExistingData: clearExistingData)
+          .timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('User Setup');
+      await reportProgress('Printers');
+      final printersResult = await PosPrinterApi()
+          .syncPrinters(clearExistingData: clearExistingData)
+          .timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('Printers');
+      await reportProgress('Customer Displays');
+      final customerDisplaysResult = await CustomerDisplayApi()
+          .syncCustomerDisplays(clearExistingData: clearExistingData)
+          .timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('Customer Displays');
+      await reportProgress('Cash Drawers');
+      final cashDrawersResult = await CashDrawerApi()
+          .syncCashDrawers(clearExistingData: clearExistingData)
+          .timeout(syncTimeout);
+      completedCount++;
+      await reportProgress('Cash Drawers');
+
       await reportProgress('Sections');
 
       final sectionResult = await SectionMasterApi()
@@ -373,6 +444,12 @@ class ApiRouteRegistry {
         menuItems: menuItemResult,
         moreSizes: moreSizesResult,
         posMast: posMastResult,
+        users: usersResult,
+        userSetup: userSetupResult,
+        printers: printersResult,
+        userGroups: userGroupsResult,
+        customerDisplays: customerDisplaysResult,
+        cashDrawers: cashDrawersResult,
         sections: sectionResult,
         shopInfo: shopInfoResult,
         sideItems: sideItemsResult,
@@ -387,9 +464,22 @@ class ApiRouteRegistry {
         error: error,
         stackTrace: stackTrace,
       );
-      Error.throwWithStackTrace(Exception('SYNC-001'), stackTrace);
+      Error.throwWithStackTrace(
+        ApiSyncException(tableName: currentTable, cause: error),
+        stackTrace,
+      );
     }
   }
+}
+
+class ApiSyncException implements Exception {
+  const ApiSyncException({required this.tableName, required this.cause});
+
+  final String tableName;
+  final Object cause;
+
+  @override
+  String toString() => 'SYNC-001: $tableName synchronization failed. $cause';
 }
 
 class ApiSyncProgress {
@@ -427,6 +517,12 @@ class ApiSyncResult {
     required this.menuItems,
     required this.moreSizes,
     required this.posMast,
+    required this.users,
+    required this.userSetup,
+    required this.printers,
+    required this.userGroups,
+    required this.customerDisplays,
+    required this.cashDrawers,
     required this.sections,
     required this.shopInfo,
     required this.sideItems,
@@ -444,6 +540,12 @@ class ApiSyncResult {
   final MenuItemSyncResult menuItems;
   final MoreSizesSyncResult moreSizes;
   final PosMastSyncResult posMast;
+  final int users;
+  final int userSetup;
+  final int printers;
+  final int userGroups;
+  final int customerDisplays;
+  final int cashDrawers;
   final SectionMasterSyncResult sections;
   final ShopInfoSyncResult shopInfo;
   final SideItemsSyncResult sideItems;

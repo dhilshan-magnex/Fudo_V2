@@ -96,15 +96,24 @@ class AppLicenseApi {
   Future<AppLicenseSyncResult> saveAppLicenseRows(
     List<Map<String, dynamic>> rows, {
     bool clearExistingData = false,
+    Database? database,
   }) async {
-    final db = await DBManager.getDatabase(AppDatabase.sys);
+    final db = database ?? await DBManager.getDatabase(AppDatabase.sys);
 
     return db.transaction((txn) async {
+      // Server_Info is also the device's configured Node.js address. Keep it
+      // across license replacement, including responses that omit this field.
+      final existingRows = await txn.query('App_License');
+      final serverAddresses = <String, Object?>{
+        for (final row in existingRows)
+          if ((row['Server_Info']?.toString().trim() ?? '').isNotEmpty)
+            row['Client_ID'].toString().trim(): row['Server_Info'],
+      };
       if (clearExistingData) {
         await txn.delete('App_License');
       }
 
-      final savedCount = await _upsertRows(txn, rows);
+      final savedCount = await _upsertRows(txn, rows, serverAddresses);
 
       return AppLicenseSyncResult(savedCount: savedCount);
     });
@@ -115,6 +124,7 @@ class AppLicenseApi {
   Future<int> _upsertRows(
     Transaction txn,
     List<Map<String, dynamic>> rows,
+    Map<String, Object?> serverAddresses,
   ) async {
     var savedCount = 0;
 
@@ -124,6 +134,10 @@ class AppLicenseApi {
       final clientId = normalizedRow['Client_ID'];
       if (clientId == null || clientId.toString().trim().isEmpty) {
         continue;
+      }
+      final serverAddress = serverAddresses[clientId.toString().trim()];
+      if (serverAddress != null) {
+        normalizedRow['Server_Info'] = serverAddress;
       }
 
       final clientName = normalizedRow['Client_Name'];

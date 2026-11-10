@@ -1,9 +1,19 @@
+import 'dart:async';
+
+import 'package:http/http.dart' as http;
+
+import '../data/server/posprinter_api.dart';
+import '../data/server/usersetup_api.dart';
+import '../data/server/customerdisplay_api.dart';
+import '../data/server/cashdrawer_api.dart';
+import 'package:fudo_v2/core/config/server_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/api/applicense_api.dart';
 import 'package:fudo_v2/data/api/posmast_api.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
+import 'package:fudo_v2/data/server/users_api.dart';
 import 'package:fudo_v2/pages/counter_selection_page.dart';
 import 'package:fudo_v2/pages/login_page.dart';
 
@@ -103,7 +113,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       final values = await Future.wait<Object?>([
         DBManager.getClientInfo(),
         DBManager.getCounterInfo(),
-        DBManager.getAppConfig('POS_PRINTER_API_BASE_URL'),
+        ServerSettings.getBaseUrl(),
       ]);
       if (!mounted) return;
       final clientInfo = values[0] as Map<String, dynamic>?;
@@ -138,16 +148,25 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
     setState(() => _saving = true);
     try {
       if (_setupRows != null) {
-        await DBManager.saveAppConfig(
-          'POS_PRINTER_API_BASE_URL',
-          _nodeApiBaseUrl(_nodeApiController.text),
-        );
+        final baseUrl = _nodeApiBaseUrl(_nodeApiController.text);
+        // Verify the users endpoint before persisting settings or counters.
+        // A failed connection must leave this step available for correction.
+        await UsersApi(baseUrl: baseUrl).getUsers();
+        await ServerSettings.saveBaseUrl(baseUrl);
         final api = PosMastApi();
         if (_setupClientType == '2') {
           await api.savePosMastRowsOnServer(_setupRows!);
         } else {
           await api.savePosMastRows(_setupRows!, clearExistingData: true);
         }
+        await UsersApi().syncUsers();
+        await UserSetupApi().syncUserGroups(clearExistingData: true);
+        await UserSetupApi().syncUserSetup(clearExistingData: true);
+        await PosPrinterApi().syncPrinters(clearExistingData: true);
+        await CustomerDisplayApi().syncCustomerDisplays(
+          clearExistingData: true,
+        );
+        await CashDrawerApi().syncCashDrawers(clearExistingData: true);
         if (!mounted) return;
         widget.onSaved(
           _setupRows!
@@ -194,13 +213,30 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         _setupLocationId = locationId;
         _saving = false;
       });
+    } on http.ClientException {
+      _showSaveError(
+        _setupRows == null
+            ? 'Cannot connect to the license service. Check your internet connection and retry.'
+            : 'Cannot connect to ${_nodeApiBaseUrl(_nodeApiController.text)}. '
+                  'Check the API address and port, start the API server, and make sure '
+                  'this device can reach it on the network.',
+      );
+    } on TimeoutException {
+      _showSaveError(
+        'The API server did not respond in time. '
+        'Check the server address, network connection, and firewall, then retry.',
+      );
     } catch (error) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save setup: $error')));
+      _showSaveError('Could not save setup: $error');
     }
+  }
+
+  void _showSaveError(String message) {
+    if (!mounted) return;
+    setState(() => _saving = false);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -321,6 +357,8 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                                 decoration: const InputDecoration(
                                   labelText: 'API IP address',
                                   hintText: '192.168.x.xxx:xxx',
+                                  helperText:
+                                      'Use the address and port of the running API server.',
                                   prefixIcon: Icon(Icons.dns_outlined),
                                 ),
                                 validator: _validateNodeApiAddress,

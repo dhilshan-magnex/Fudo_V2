@@ -11,14 +11,10 @@ class SQLiteClass {
   ) async {
     final dataSource = DataSourceManager.getDataSource(clientType);
 
-    // SQLITE CLIENT
-
     if (dataSource == DataSource.sqlite) {
       final db = await DBManager.getDatabase(dbType);
       return db.query(tableName);
     }
-
-    // API CLIENT
 
     await _syncTableFromApi(dbType, tableName);
     final db = await DBManager.getDatabase(dbType);
@@ -26,7 +22,7 @@ class SQLiteClass {
   }
 
 
-  // GET DATA WITH WHERE CONDITION
+  
   static Future<List<Map<String, dynamic>>> getTableDataWhere(
     String clientType,
     AppDatabase dbType,

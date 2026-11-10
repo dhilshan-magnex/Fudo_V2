@@ -4,8 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
 
-// Client type 1 is multi-terminal; client type 2 is single-terminal.
-// Multi-terminal clients use the API, while single-terminal clients use SQLite.
+// Client type 1 uses local SQLite; client type 2 uses the server API.
 enum DataSource { sqlite, api }
 
 class DataSourceManager {
@@ -13,10 +12,10 @@ class DataSourceManager {
     final resolvedClientType = (clientType ?? SessionProvider.currentClientType)
         .trim();
     return switch (resolvedClientType) {
-      '1' => DataSource.api,
-      '2' => DataSource.sqlite,
+      '1' => DataSource.sqlite,
+      '2' => DataSource.api,
       _ => throw StateError(
-        'Unsupported client type "$resolvedClientType". Expected 1 (multi-terminal) or 2 (single-terminal).',
+        'Unsupported client type "$resolvedClientType". Expected 1 (SQLite) or 2 (server API).',
       ),
     };
   }
@@ -189,15 +188,16 @@ class DBManager {
 
   static Future<Map<String, dynamic>?> getUserForLogin(
     String clientType,
-    String userId,
-  ) async {
-    if (DataSourceManager.getDataSource(clientType) != DataSource.sqlite) {
-      return null;
-    }
+    String userId, {
+    Database? database,
+  }) async {
+    // Both client types sync User_File locally during setup. The client type
+    // controls operational data routing, not access to the login database.
+    DataSourceManager.getDataSource(clientType);
 
-    final database = await getDatabase(AppDatabase.fudo);
+    final loginDatabase = database ?? await getDatabase(AppDatabase.fudo);
     final trimmedUserId = userId.trim();
-    final rows = await database.query(
+    final rows = await loginDatabase.query(
       'User_File',
       where: '''
         (CAST(User_ID AS TEXT) = ? OR User_Name = ?)
@@ -232,13 +232,43 @@ class DBManager {
     Database database,
   ) async {
     if (dbType == AppDatabase.sys) {
+      final columns = await database.rawQuery('PRAGMA table_info(App_License)');
+      if (!columns.any((column) => column['name'] == 'Server_Info')) {
+        await database.execute(
+          'ALTER TABLE App_License ADD COLUMN Server_Info TEXT',
+        );
+      }
+      final legacyFile = File(
+        join(dirname(database.path), 'server_address.txt'),
+      );
+      String? legacyAddress;
+      if (await legacyFile.exists()) {
+        legacyAddress = (await legacyFile.readAsString()).trim();
+      }
       await database.execute('DROP TABLE IF EXISTS App_Setup');
-      await database.execute('''
-        CREATE TABLE IF NOT EXISTS App_Config (
-          Config_Key TEXT PRIMARY KEY,
-          Config_Value TEXT NOT NULL
-        )
-      ''');
+      final tables = await database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'App_Config'",
+      );
+      if (tables.isNotEmpty) {
+        final rows = await database.query(
+          'App_Config',
+          columns: ['Config_Value'],
+          where: 'Config_Key = ?',
+          whereArgs: ['POS_PRINTER_API_BASE_URL'],
+          limit: 1,
+        );
+        if ((legacyAddress == null || legacyAddress.isEmpty) &&
+            rows.isNotEmpty) {
+          legacyAddress = rows.first['Config_Value']?.toString().trim();
+        }
+      }
+      if (legacyAddress != null && legacyAddress.isNotEmpty) {
+        final rows = await database.query('App_License', limit: 1);
+        if (rows.isEmpty) return;
+        await database.update('App_License', {'Server_Info': legacyAddress});
+        if (await legacyFile.exists()) await legacyFile.delete();
+      }
+      if (tables.isNotEmpty) await database.execute('DROP TABLE App_Config');
       return;
     }
 
@@ -251,31 +281,6 @@ class DBManager {
         'ALTER TABLE Tran_Header ADD COLUMN Bill_Time TEXT',
       );
     }
-  }
-
-  static Future<void> saveAppConfig(String key, String value) async {
-    final normalizedKey = key.trim();
-    if (normalizedKey.isEmpty) {
-      throw ArgumentError('Config key cannot be empty.');
-    }
-    final database = await getDatabase(AppDatabase.sys);
-    await database.insert(
-      'App_Config',
-      {'Config_Key': normalizedKey, 'Config_Value': value.trim()},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  static Future<String?> getAppConfig(String key) async {
-    final database = await getDatabase(AppDatabase.sys);
-    final rows = await database.query(
-      'App_Config',
-      columns: ['Config_Value'],
-      where: 'Config_Key = ?',
-      whereArgs: [key.trim()],
-      limit: 1,
-    );
-    return rows.isEmpty ? null : rows.first['Config_Value']?.toString();
   }
 
   static Future<void> _refreshInvalidDatabase(
