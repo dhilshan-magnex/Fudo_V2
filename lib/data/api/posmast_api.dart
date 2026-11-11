@@ -91,9 +91,12 @@ class PosMastApi {
     List<Map<String, dynamic>> rows, {
     PosPrinterApi? serverApi,
   }) async {
-    final savedBaseUrl = await ServerSettings.getBaseUrl();
     final api =
-        serverApi ?? PosPrinterApi(client: _client, baseUrl: savedBaseUrl);
+        serverApi ??
+        PosPrinterApi(
+          client: _client,
+          baseUrl: await ServerSettings.getBaseUrl(),
+        );
     var savedCount = 0;
     for (final row in rows) {
       final counterNo = _readValue(row, 'Counter_No')?.toString().trim() ?? '';

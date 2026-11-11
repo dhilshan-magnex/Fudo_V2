@@ -101,8 +101,6 @@ class AppLicenseApi {
     final db = database ?? await DBManager.getDatabase(AppDatabase.sys);
 
     return db.transaction((txn) async {
-      // Server_Info is also the device's configured Node.js address. Keep it
-      // across license replacement, including responses that omit this field.
       final existingRows = await txn.query('App_License');
       final serverAddresses = <String, Object?>{
         for (final row in existingRows)

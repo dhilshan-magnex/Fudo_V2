@@ -6,10 +6,12 @@ class CounterSelectionPage extends StatefulWidget {
   const CounterSelectionPage({
     required this.onSelected,
     this.initialCounters,
+    this.afterCounterSaved,
     super.key,
   });
 
   final ValueChanged<String> onSelected;
+  final Future<void> Function()? afterCounterSaved;
   final List<Map<String, dynamic>>? initialCounters;
 
   @override
@@ -59,11 +61,12 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
     final database = await DBManager.getDatabase(AppDatabase.fudo);
     final clientInfo = await DBManager.getClientInfo();
     final locationId = clientInfo?['Location_ID']?.toString() ?? '';
-    return database.query('POS_Mast').then(
-      (rows) => rows
-          .map((row) => {...row, 'Location_ID': locationId})
-          .toList(),
-    );
+    return database
+        .query('POS_Mast')
+        .then(
+          (rows) =>
+              rows.map((row) => {...row, 'Location_ID': locationId}).toList(),
+        );
   }
 
   Future<void> _continueWithSelectedCounter() async {
@@ -76,12 +79,13 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
         (counter) => counter['Counter_No']?.toString() == counterNo,
       );
       await DBManager.saveSelectedCounterInfo(selectedCounter);
+      await widget.afterCounterSaved?.call();
       if (!mounted) return;
       widget.onSelected(counterNo);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save selected counter: $error')),
+        SnackBar(content: Text('Could not finish counter setup: $error')),
       );
     } finally {
       if (mounted) setState(() => _savingSelection = false);
@@ -197,7 +201,9 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() => _selectedCounterNo = counterNo),
+          onTap: _savingSelection
+              ? null
+              : () => setState(() => _selectedCounterNo = counterNo),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(

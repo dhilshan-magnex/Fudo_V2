@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
 import 'package:fudo_v2/data/api/applicense_api.dart';
 import 'package:fudo_v2/data/api/posmast_api.dart';
+import 'package:fudo_v2/data/api/shopinfo_api.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
 import 'package:fudo_v2/data/server/users_api.dart';
@@ -70,6 +71,7 @@ class _StartupGateState extends State<StartupGate> {
   Widget _buildCounterSelectionPage(BuildContext context) {
     return CounterSelectionPage(
       initialCounters: _setupCounters,
+      afterCounterSaved: _completedSetup ? _finishInitialSetup : null,
       onSelected: (counterNo) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
@@ -78,6 +80,26 @@ class _StartupGateState extends State<StartupGate> {
         );
       },
     );
+  }
+
+  Future<void> _finishInitialSetup() async {
+    await UsersApi().syncUsers();
+    await UserSetupApi().syncUserGroups(clearExistingData: true);
+    await UserSetupApi().syncUserSetup(clearExistingData: true);
+    await PosPrinterApi().syncPrinters(clearExistingData: true);
+    await CustomerDisplayApi().syncCustomerDisplays(clearExistingData: true);
+    await CashDrawerApi().syncCashDrawers(clearExistingData: true);
+    final client = await DBManager.getClientInfo();
+    final result = await ShopInfoApi().syncShopInfo(
+      clientId: client!['Client_ID'].toString(),
+      locationId: _setupCounters!.first['Location_ID'].toString(),
+      clientType: client['Client_Type'].toString().trim(),
+      clearExistingData: true,
+    );
+    if (result.savedCount == 0) {
+      throw StateError('Shop Info API returned no valid shop data.');
+    }
+    await DBManager.setInitialSetupComplete(true);
   }
 }
 
@@ -149,8 +171,8 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
     try {
       if (_setupRows != null) {
         final baseUrl = _nodeApiBaseUrl(_nodeApiController.text);
-        // Verify the users endpoint before persisting settings or counters.
-        // A failed connection must leave this step available for correction.
+        // Check connectivity while the address is still editable. Inserts
+        // into User_File happen only after the selected counter is saved.
         await UsersApi(baseUrl: baseUrl).getUsers();
         await ServerSettings.saveBaseUrl(baseUrl);
         final api = PosMastApi();
@@ -159,14 +181,6 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         } else {
           await api.savePosMastRows(_setupRows!, clearExistingData: true);
         }
-        await UsersApi().syncUsers();
-        await UserSetupApi().syncUserGroups(clearExistingData: true);
-        await UserSetupApi().syncUserSetup(clearExistingData: true);
-        await PosPrinterApi().syncPrinters(clearExistingData: true);
-        await CustomerDisplayApi().syncCustomerDisplays(
-          clearExistingData: true,
-        );
-        await CashDrawerApi().syncCashDrawers(clearExistingData: true);
         if (!mounted) return;
         widget.onSaved(
           _setupRows!
@@ -186,6 +200,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         throw StateError('Client ID or Location ID is invalid.');
       }
 
+      await DBManager.setInitialSetupComplete(false);
       final licenseResult = await AppLicenseApi().syncAppLicense(
         clientId: clientId,
         locationId: locationId,

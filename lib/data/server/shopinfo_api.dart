@@ -91,7 +91,31 @@ class ShopInfoApi {
     String operation,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('$operation failed with status ${response.statusCode}.');
+      String? detail;
+      try {
+        final payload = jsonDecode(response.body);
+        if (payload is Map) {
+          final messages = <String>{};
+          for (final key in ['message', 'error', 'detail']) {
+            final value = payload[key];
+            final message = value is String
+                ? value
+                : value is Map && value['message'] is String
+                ? value['message'] as String
+                : null;
+            if (message != null && message.trim().isNotEmpty) {
+              messages.add(message.trim());
+            }
+          }
+          if (messages.isNotEmpty) detail = messages.join(' — ');
+        }
+      } on FormatException {
+        // Proxies may return HTML rather than a JSON API error.
+      }
+      throw Exception(
+        '$operation failed with status ${response.statusCode}. '
+        '${detail ?? 'The API did not provide an error message. The server administrator needs to check this request.'}',
+      );
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {

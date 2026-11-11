@@ -3,7 +3,9 @@ import 'package:http/http.dart' as http;
 import 'api_http_client.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../core/config/api_config.dart';
+import '../../core/config/server_settings.dart';
 import '../database/db_manager.dart';
+import '../server/shopinfo_api.dart' as server;
 
 class ShopInfoApi {
   ShopInfoApi({http.Client? client})
@@ -15,15 +17,121 @@ class ShopInfoApi {
 
   Future<ShopInfoSyncResult> syncShopInfo({
     String? apiUrl,
+    String? clientId,
+    String? locationId,
+    String? clientType,
+    server.ShopInfoApi? serverApi,
+    Database? database,
     Map<String, String>? headers,
     bool clearExistingData = false,
   }) async {
+    if ((clientId == null) != (locationId == null)) {
+      throw ArgumentError(
+        'Client_ID and Location_ID must be supplied together.',
+      );
+    }
+    final dataSource = DataSourceManager.getDataSource(clientType);
     final rows = await _fetchRows(
-      apiUrl ?? ApiConfig.url(ShopInfoApi.shopInfoEndpoint),
+      apiUrl ??
+          (clientId != null && locationId != null
+              ? ApiConfig.urlForClient(
+                  shopInfoEndpoint,
+                  clientId: clientId,
+                  locationId: locationId,
+                )
+              : ApiConfig.url(shopInfoEndpoint)),
       headers: headers,
     );
 
-    return saveShopInfoRows(rows, clearExistingData: clearExistingData);
+    if (dataSource == DataSource.api) {
+      return saveShopInfoRowsOnServer(rows, serverApi: serverApi);
+    }
+    return saveShopInfoRows(
+      rows,
+      database: database,
+      clearExistingData: clearExistingData,
+    );
+  }
+
+  Future<ShopInfoSyncResult> saveShopInfoRowsOnServer(
+    List<Map<String, dynamic>> rows, {
+    server.ShopInfoApi? serverApi,
+  }) async {
+    final api =
+        serverApi ??
+        server.ShopInfoApi(
+          client: _client,
+          baseUrl: await ServerSettings.getBaseUrl(),
+        );
+    final existingRows = (await api.getShopInfo()).map(_normalizeRow).toList();
+    var savedCount = 0;
+    for (final source in rows) {
+      final row = _normalizeRow(source);
+      final clientId = row['Client_ID']?.toString().trim() ?? '';
+      final locationId = row['Location_ID']?.toString().trim() ?? '';
+      final locationName = row['Location_Name']?.toString().trim() ?? '';
+      if (clientId.isEmpty || locationId.isEmpty || locationName.isEmpty) {
+        continue;
+      }
+      if (existingRows.any((existing) => _sameShopInfo(row, existing))) {
+        // The desired data is already persisted; repeated syncs must not
+        // attempt another INSERT for the same shop.
+        savedCount++;
+        continue;
+      }
+      num number(String key, num fallback) =>
+          num.tryParse(row[key]?.toString() ?? '') ?? fallback;
+      await api.createShopInfo(
+        clientId: clientId,
+        locationId: locationId,
+        locationName: locationName,
+        locationAddress1: row['Location_Address1']?.toString(),
+        locationAddress2: row['Location_Address2']?.toString(),
+        locationPhone: row['Location_Phone']?.toString(),
+        locationMobile: row['Location_Mobile']?.toString(),
+        locationEmail: row['Location_Email']?.toString(),
+        footerMessage1: row['Footer_Message1']?.toString(),
+        footerMessage2: row['Footer_Message2']?.toString(),
+        footerMessageL1: row['Footer_Message_L1']?.toString(),
+        footerMessage2L1: row['Footer_Message2_L1']?.toString(),
+        currencyCode: row['Currency_Code']?.toString(),
+        currencyDecimal: number('Currency_Decimal', 2).toInt(),
+        taxInclusive: row['Tax_Inclusive'] is bool
+            ? (row['Tax_Inclusive'] == true ? 1 : 0)
+            : number('Tax_Inclusive', 0).toInt(),
+        serviceCharge: number('Service_Charge', 0),
+        deliveryCharge: number('Delivery_Charge', 0),
+        salesTarget: number('Sales_target', 0),
+      );
+      savedCount++;
+      existingRows.add(row);
+    }
+    return ShopInfoSyncResult(savedCount: savedCount);
+  }
+
+  bool _sameShopInfo(Map<String, dynamic> desired, Map<String, dynamic> saved) {
+    const numericDefaults = {
+      'Currency_Decimal': 2,
+      'Tax_Inclusive': 0,
+      'Service_Charge': 0,
+      'Delivery_Charge': 0,
+      'Sales_target': 0,
+    };
+    for (final column in ShopInfoPayload.columns) {
+      final expected = desired[column];
+      final actual = saved[column];
+      if (numericDefaults.containsKey(column)) {
+        num? number(dynamic value) => value is bool
+            ? (value ? 1 : 0)
+            : num.tryParse(value?.toString() ?? '');
+        if ((number(expected) ?? numericDefaults[column]) != number(actual)) {
+          return false;
+        }
+      } else if (expected?.toString() != actual?.toString()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<List<Map<String, dynamic>>> _fetchRows(
@@ -47,9 +155,10 @@ class ShopInfoApi {
 
   Future<ShopInfoSyncResult> saveShopInfoRows(
     List<Map<String, dynamic>> rows, {
+    Database? database,
     bool clearExistingData = false,
   }) async {
-    final db = await DBManager.getDatabase(AppDatabase.fudo);
+    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
 
     return db.transaction((txn) async {
       if (clearExistingData) {

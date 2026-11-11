@@ -82,8 +82,30 @@ class DBManager {
     return rows.isEmpty ? null : Map<String, dynamic>.from(rows.first);
   }
 
-  static Future<bool> isInitialSetupComplete() async {
-    final database = await getDatabase(AppDatabase.sys);
+  static Future<void> setInitialSetupComplete(
+    bool complete, {
+    Database? database,
+  }) async {
+    final db = database ?? await getDatabase(AppDatabase.sys);
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS Device_Setup_Status '
+      '(ID INTEGER PRIMARY KEY, Complete INTEGER NOT NULL)',
+    );
+    await db.insert('Device_Setup_Status', {
+      'ID': 1,
+      'Complete': complete ? 1 : 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  static Future<bool> isInitialSetupComplete({Database? database}) async {
+    database ??= await getDatabase(AppDatabase.sys);
+    await database.execute(
+      'CREATE TABLE IF NOT EXISTS Device_Setup_Status '
+      '(ID INTEGER PRIMARY KEY, Complete INTEGER NOT NULL)',
+    );
+    final status = await database.query('Device_Setup_Status', limit: 1);
+    if (status.isNotEmpty && status.first['Complete'] != 1) return false;
+    // Preserve existing installations that predate the completion marker.
     final licenseRows = await database.query('App_License', limit: 1);
     final counterRows = await database.query('Counter_Info', limit: 1);
     return licenseRows.isNotEmpty && counterRows.isNotEmpty;
@@ -191,8 +213,6 @@ class DBManager {
     String userId, {
     Database? database,
   }) async {
-    // Both client types sync User_File locally during setup. The client type
-    // controls operational data routing, not access to the login database.
     DataSourceManager.getDataSource(clientType);
 
     final loginDatabase = database ?? await getDatabase(AppDatabase.fudo);

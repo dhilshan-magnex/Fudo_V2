@@ -85,11 +85,7 @@ class CategoryApi {
     }
 
     final decodedJson = jsonDecode(response.body);
-
     final rows = CategoryPayload.rowsFromJson(decodedJson);
-
-    debugPrint('PARSED ROW COUNT: ${rows.length}');
-
     return rows;
   }
 

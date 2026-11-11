@@ -3,7 +3,7 @@ import 'package:fudo_v2/core/session/session_provider.dart';
 import 'package:fudo_v2/functions/orders/models/order.dart';
 
 class KotService {
-  /// Allocates a KOT number and saves every ordered item to `Tran_Detail`.
+  
   Future<int> saveOrderLines({
     required DatabaseExecutor transaction,
     required Order order,
@@ -60,7 +60,6 @@ class KotService {
         await transaction.insert('Tran_Detail', {
           ...lineValues,
           'Line_No': nextLineNo++,
-          // Links this note row back to the item row for KOT printing.
           'Child_Line_No': lineNo,
           'Tran_Description': note,
           'Tran_Qty': 0,
@@ -148,7 +147,7 @@ class KotService {
     _ => 'TS',
   };
 
-  /// Stores database bill dates without a time component.
+
   String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
