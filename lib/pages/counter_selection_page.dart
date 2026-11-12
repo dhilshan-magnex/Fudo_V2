@@ -11,7 +11,7 @@ class CounterSelectionPage extends StatefulWidget {
   });
 
   final ValueChanged<String> onSelected;
-  final Future<void> Function()? afterCounterSaved;
+  final Future<void> Function(Map<String, dynamic> counter)? afterCounterSaved;
   final List<Map<String, dynamic>>? initialCounters;
 
   @override
@@ -71,7 +71,7 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
 
   Future<void> _continueWithSelectedCounter() async {
     final counterNo = _selectedCounterNo;
-    if (counterNo == null) return;
+    if (counterNo == null || _savingSelection) return;
 
     setState(() => _savingSelection = true);
     try {
@@ -79,7 +79,7 @@ class _CounterSelectionPageState extends State<CounterSelectionPage> {
         (counter) => counter['Counter_No']?.toString() == counterNo,
       );
       await DBManager.saveSelectedCounterInfo(selectedCounter);
-      await widget.afterCounterSaved?.call();
+      await widget.afterCounterSaved?.call(selectedCounter);
       if (!mounted) return;
       widget.onSelected(counterNo);
     } catch (error) {

@@ -68,7 +68,7 @@ class CashDrawerApi {
 
   Future<List<Map<String, dynamic>>> getCashDrawers() async {
     final response = await _client.get(
-      _uri('/cash-drawers'),
+      await _uri('/cash-drawers'),
       headers: const {'Accept': 'application/json'},
     );
     return _rowsFromResponse(response, 'Get cash drawers');
@@ -77,7 +77,7 @@ class CashDrawerApi {
   Future<List<Map<String, dynamic>>> getCashDrawer(String drawerCode) async {
     _validateDrawerCode(drawerCode);
     final response = await _client.get(
-      _uri('/cash-drawer', {'Drawer_Code': drawerCode}),
+      await _uri('/cash-drawer', {'Drawer_Code': drawerCode}),
       headers: const {'Accept': 'application/json'},
     );
     return _rowsFromResponse(response, 'Get cash drawer');
@@ -95,7 +95,7 @@ class CashDrawerApi {
     _validateLength(drawerType, 'Drawer_Type', 10);
 
     final response = await _client.post(
-      _uri('/cash-drawer'),
+      await _uri('/cash-drawer'),
       headers: const {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -123,11 +123,14 @@ class CashDrawerApi {
     }
   }
 
-  Uri _uri(String path, [Map<String, String>? queryParameters]) {
-    if (_baseUrl.isEmpty) {
+  Future<Uri> _uri(String path, [Map<String, String>? queryParameters]) async {
+    final baseUrl = _baseUrl.isNotEmpty
+        ? _baseUrl
+        : (await ServerSettings.getBaseUrl() ?? '').trim();
+    if (baseUrl.isEmpty) {
       throw StateError('Enter the Node.js API server address in device setup.');
     }
-    final base = Uri.parse(_baseUrl);
+    final base = Uri.parse(baseUrl);
     final apiPath = '${base.path.replaceFirst(RegExp(r'/+$'), '')}/api$path';
     return base.replace(path: apiPath, queryParameters: queryParameters);
   }

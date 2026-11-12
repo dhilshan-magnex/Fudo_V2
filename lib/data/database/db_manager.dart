@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
+import '../server/users_api.dart';
 
 // Client type 1 uses local SQLite; client type 2 uses the server API.
 enum DataSource { sqlite, api }
@@ -212,8 +213,36 @@ class DBManager {
     String clientType,
     String userId, {
     Database? database,
+    UsersApi? usersApi,
   }) async {
-    DataSourceManager.getDataSource(clientType);
+    if (DataSourceManager.getDataSource(clientType) == DataSource.api) {
+      final rows = await (usersApi ?? UsersApi()).getUsers();
+      final loginId = userId.trim();
+      for (final row in rows) {
+        final fields = {
+          for (final entry in row.entries) entry.key.toLowerCase(): entry.value,
+        };
+        final active = fields['user_active'];
+        if ((active == true || active.toString() == '1') &&
+            (fields['user_id']?.toString() == loginId ||
+                fields['user_name']?.toString() == loginId)) {
+          return {
+            ...row,
+            for (final column in [
+              'User_ID',
+              'User_Name',
+              'User_Pwd',
+              'User_Active',
+              'Group_Code',
+              'Group_Name',
+            ])
+              if (fields.containsKey(column.toLowerCase()))
+                column: fields[column.toLowerCase()],
+          };
+        }
+      }
+      return null;
+    }
 
     final loginDatabase = database ?? await getDatabase(AppDatabase.fudo);
     final trimmedUserId = userId.trim();

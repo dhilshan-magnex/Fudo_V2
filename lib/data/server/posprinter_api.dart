@@ -92,11 +92,9 @@ class PosPrinterApi {
     final body = <String, dynamic>{
       'Counter_No': counterNo,
       'Counter_Name': counterName,
-      'Receipt_Code': receiptCode,
-      if (cashDrawerCode != null && cashDrawerCode.isNotEmpty)
-        'Cash_Drawer_Code': cashDrawerCode,
-      if (customerDisplayCode != null && customerDisplayCode.isNotEmpty)
-        'Cus_Display_Code': customerDisplayCode,
+      'Receipt_Prn_Code': receiptCode,
+      'Cash_Drawer_Code': cashDrawerCode ?? '',
+      'Customer_Display_Code': customerDisplayCode ?? '',
     };
     final response = await _client.post(
       _uri('/pos'),

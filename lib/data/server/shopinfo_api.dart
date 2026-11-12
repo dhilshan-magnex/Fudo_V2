@@ -1,3 +1,4 @@
+import '../../core/config/server_settings.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -14,7 +15,7 @@ class ShopInfoApi {
 
   Future<List<Map<String, dynamic>>> getShopInfo() async {
     final response = await _client.get(
-      _uri('/shop-info'),
+      await _uri('/shop-info'),
       headers: const {'Accept': 'application/json'},
     );
     final payload = _payloadFromResponse(response, 'Get shop information');
@@ -48,7 +49,7 @@ class ShopInfoApi {
     num salesTarget = 0,
   }) async {
     final response = await _client.post(
-      _uri('/shop-info'),
+      await _uri('/shop-info'),
       headers: const {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -77,11 +78,14 @@ class ShopInfoApi {
     _payloadFromResponse(response, 'Create shop information');
   }
 
-  Uri _uri(String path) {
-    if (_baseUrl.isEmpty) {
+  Future<Uri> _uri(String path) async {
+    final baseUrl = _baseUrl.isNotEmpty
+        ? _baseUrl
+        : (await ServerSettings.getBaseUrl() ?? '').trim();
+    if (baseUrl.isEmpty) {
       throw StateError('Enter the Node.js API server address in device setup.');
     }
-    final base = Uri.parse(_baseUrl);
+    final base = Uri.parse(baseUrl);
     final apiPath = '${base.path.replaceFirst(RegExp(r'/+$'), '')}/api$path';
     return base.replace(path: apiPath);
   }

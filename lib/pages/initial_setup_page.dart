@@ -82,10 +82,11 @@ class _StartupGateState extends State<StartupGate> {
     );
   }
 
-  Future<void> _finishInitialSetup() async {
+  Future<void> _finishInitialSetup(Map<String, dynamic> selectedCounter) async {
     final client = await DBManager.getClientInfo();
     if (DataSourceManager.getDataSource(client!['Client_Type'].toString()) ==
         DataSource.api) {
+      await PosMastApi().savePosMastRowsOnServer([selectedCounter]);
       await UsersApi().syncUsers();
       await UserSetupApi().syncUserGroups(clearExistingData: true);
       await UserSetupApi().syncUserSetup(clearExistingData: true);
@@ -95,7 +96,7 @@ class _StartupGateState extends State<StartupGate> {
     }
     final result = await ShopInfoApi().syncShopInfo(
       clientId: client['Client_ID'].toString(),
-      locationId: _setupCounters!.first['Location_ID'].toString(),
+      locationId: selectedCounter['Location_ID'].toString(),
       clientType: client['Client_Type'].toString().trim(),
       clearExistingData: true,
     );
@@ -124,7 +125,6 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
   bool _saving = false;
   String? _loadError;
   List<Map<String, dynamic>>? _setupRows;
-  String? _setupClientType;
   String? _setupLocationId;
 
   @override
@@ -178,12 +178,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         // into User_File happen only after the selected counter is saved.
         await UsersApi(baseUrl: baseUrl).getUsers();
         await ServerSettings.saveBaseUrl(baseUrl);
-        final api = PosMastApi();
-        if (_setupClientType == '2') {
-          await api.savePosMastRowsOnServer(_setupRows!);
-        } else {
-          await api.savePosMastRows(_setupRows!, clearExistingData: true);
-        }
+        // Keep the fetched rows in memory; upload only after counter selection.
         if (!mounted) return;
         widget.onSaved(
           _setupRows!
@@ -238,7 +233,6 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       if (!mounted) return;
       setState(() {
         _setupRows = rows;
-        _setupClientType = clientType;
         _setupLocationId = locationId;
         _saving = false;
       });

@@ -70,7 +70,7 @@ class CustomerDisplayApi {
     String displayCode,
   ) async {
     final response = await _client.get(
-      _uri('/customer-display', {'Display_Code': displayCode}),
+      await _uri('/customer-display', {'Display_Code': displayCode}),
       headers: const {'Accept': 'application/json'},
     );
     return _rowsFromResponse(response, 'Get customer display');
@@ -78,7 +78,7 @@ class CustomerDisplayApi {
 
   Future<List<Map<String, dynamic>>> getCustomerDisplays() async {
     final response = await _client.get(
-      _uri('/customer-displays'),
+      await _uri('/customer-displays'),
       headers: const {'Accept': 'application/json'},
     );
     return _rowsFromResponse(response, 'Get customer displays');
@@ -91,7 +91,7 @@ class CustomerDisplayApi {
     String? displayType,
   }) async {
     final response = await _client.post(
-      _uri('/customer-display'),
+      await _uri('/customer-display'),
       headers: const {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -106,11 +106,14 @@ class CustomerDisplayApi {
     _payloadFromResponse(response, 'Create customer display');
   }
 
-  Uri _uri(String path, [Map<String, String>? queryParameters]) {
-    if (_baseUrl.isEmpty) {
+  Future<Uri> _uri(String path, [Map<String, String>? queryParameters]) async {
+    final baseUrl = _baseUrl.isNotEmpty
+        ? _baseUrl
+        : (await ServerSettings.getBaseUrl() ?? '').trim();
+    if (baseUrl.isEmpty) {
       throw StateError('Enter the Node.js API server address in device setup.');
     }
-    final base = Uri.parse(_baseUrl);
+    final base = Uri.parse(baseUrl);
     final apiPath = '${base.path.replaceFirst(RegExp(r'/+$'), '')}/api$path';
     return base.replace(path: apiPath, queryParameters: queryParameters);
   }

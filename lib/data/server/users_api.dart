@@ -61,7 +61,10 @@ class UsersApi {
 
   Future<List<Map<String, dynamic>>> getUsers() async {
     final response = await _client
-        .get(_uri('/users'), headers: const {'Accept': 'application/json'})
+        .get(
+          await _uri('/users'),
+          headers: const {'Accept': 'application/json'},
+        )
         .timeout(const Duration(seconds: 15));
     final payload = _payloadFromResponse(response, 'Get users');
     final data = payload['data'];
@@ -79,7 +82,7 @@ class UsersApi {
     int userActive = 1,
   }) async {
     final response = await _client.post(
-      _uri('/users'),
+      await _uri('/users'),
       headers: const {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -95,11 +98,14 @@ class UsersApi {
     _payloadFromResponse(response, 'Create user');
   }
 
-  Uri _uri(String path) {
-    if (_baseUrl.isEmpty) {
+  Future<Uri> _uri(String path) async {
+    final baseUrl = _baseUrl.isNotEmpty
+        ? _baseUrl
+        : (await ServerSettings.getBaseUrl() ?? '').trim();
+    if (baseUrl.isEmpty) {
       throw StateError('Enter the Node.js API server address in device setup.');
     }
-    final base = Uri.parse(_baseUrl);
+    final base = Uri.parse(baseUrl);
     final apiPath = '${base.path.replaceFirst(RegExp(r'/+$'), '')}/api$path';
     return base.replace(path: apiPath);
   }

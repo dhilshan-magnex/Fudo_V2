@@ -22,9 +22,7 @@ Future<void> _showConfirmedOrder(
         );
       })
       .toList(growable: false);
-  // Do not push the edit page in the same callback that pops this sheet.
-  // The route is still disposing at that point, which can leave inherited
-  // widget dependents attached and result in duplicate GlobalKey errors.
+
   final shouldAddItems = await _showBillingOrderDetailsSheet(
     context,
     order,

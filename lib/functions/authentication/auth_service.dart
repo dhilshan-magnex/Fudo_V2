@@ -1,19 +1,40 @@
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
+import 'package:fudo_v2/data/server/users_api.dart';
 
 class AuthService {
+  AuthService({UsersApi? usersApi, ValidUserApi? validUserApi})
+    : _usersApi = usersApi,
+      _validUserApi = validUserApi ?? ValidUserApi();
+
+  final UsersApi? _usersApi;
+  final ValidUserApi _validUserApi;
+
   Future<Map<String, dynamic>?> validateLogin(
     String clientType,
     String userId,
-    String password,
-  ) async {
-    final user = await DBManager.getUserForLogin(clientType, userId);
+    String password, {
+    String? clientId,
+    String? locationId,
+  }) async {
+    if (DataSourceManager.getDataSource(clientType) == DataSource.api) {
+      return _validUserApi.validateCredentials(
+        userId: userId,
+        password: password,
+      );
+    }
+    final user = await DBManager.getUserForLogin(
+      clientType,
+      userId,
+      usersApi: _usersApi,
+    );
 
     if (user == null) {
       _logFailure(
-        'No matching active user in the local User_File. '
-        'Check user synchronization and User_Active.',
+        'No matching active user in the selected data source. '
+        'Check User_Active.',
       );
       return null;
     }
@@ -21,11 +42,11 @@ class AuthService {
     final storedPassword = (user['User_Pwd'] ?? '').toString();
     if (storedPassword.isEmpty) {
       _logFailure(
-        'The synced user has no User_Pwd value. '
-        'Check the users API response and sync mapping.',
+        'The user has no User_Pwd value. '
+        'Check the selected data source.',
       );
       throw StateError(
-        'The users API did not provide password data for local login. '
+        'The selected data source did not provide password data for login. '
         'Configure backend authentication before signing in.',
       );
     }

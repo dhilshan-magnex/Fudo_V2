@@ -25,7 +25,6 @@ part 'widgets/billing_view.dart';
 part 'widgets/billing_order_details_sheet.dart';
 part 'models/billing_running_order.dart';
 part 'widgets/billing_content.dart';
-part 'widgets/billing_order_row.dart';
 
 const _orderIdColumnFlex = 9;
 const _orderTypeColumnFlex = 7;
