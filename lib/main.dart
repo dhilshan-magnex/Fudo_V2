@@ -7,7 +7,7 @@ import 'functions/orders/data/order_database.dart';
 import 'functions/orders/data/order_repository.dart';
 import 'functions/orders/state/order_provider.dart';
 import 'functions/orderdetails/order_details.dart';
-import 'pages/tables/state/table_layout_provider.dart';
+import 'pages/tables/logic/table_layout_provider.dart';
 import 'pages/initial_setup_page.dart';
 import 'data/api/api_http_client.dart';
 import 'data/database/db_manager.dart';

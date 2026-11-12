@@ -83,15 +83,18 @@ class _StartupGateState extends State<StartupGate> {
   }
 
   Future<void> _finishInitialSetup() async {
-    await UsersApi().syncUsers();
-    await UserSetupApi().syncUserGroups(clearExistingData: true);
-    await UserSetupApi().syncUserSetup(clearExistingData: true);
-    await PosPrinterApi().syncPrinters(clearExistingData: true);
-    await CustomerDisplayApi().syncCustomerDisplays(clearExistingData: true);
-    await CashDrawerApi().syncCashDrawers(clearExistingData: true);
     final client = await DBManager.getClientInfo();
+    if (DataSourceManager.getDataSource(client!['Client_Type'].toString()) ==
+        DataSource.api) {
+      await UsersApi().syncUsers();
+      await UserSetupApi().syncUserGroups(clearExistingData: true);
+      await UserSetupApi().syncUserSetup(clearExistingData: true);
+      await PosPrinterApi().syncPrinters(clearExistingData: true);
+      await CustomerDisplayApi().syncCustomerDisplays(clearExistingData: true);
+      await CashDrawerApi().syncCashDrawers(clearExistingData: true);
+    }
     final result = await ShopInfoApi().syncShopInfo(
-      clientId: client!['Client_ID'].toString(),
+      clientId: client['Client_ID'].toString(),
       locationId: _setupCounters!.first['Location_ID'].toString(),
       clientType: client['Client_Type'].toString().trim(),
       clearExistingData: true,
@@ -220,6 +223,17 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       );
       if (rows.isEmpty) {
         throw StateError('POS_Mast API returned no counters to select.');
+      }
+      if (clientType == '1') {
+        await PosMastApi().savePosMastRows(rows, clearExistingData: true);
+        if (!mounted) return;
+        widget.onSaved(
+          rows
+              .where((row) => row['Counter_No'] != null)
+              .map((row) => {...row, 'Location_ID': locationId})
+              .toList(),
+        );
+        return;
       }
       if (!mounted) return;
       setState(() {

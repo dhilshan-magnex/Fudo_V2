@@ -43,6 +43,20 @@ class ApiRouteRegistry {
         .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
         .toLowerCase();
 
+    const serverTables = {
+      'usersetup',
+      'printmast',
+      'printermast',
+      'usergroup',
+      'customerdisplay',
+      'cashdrawer',
+      'userfile',
+    };
+    if (serverTables.contains(normalizedKey) &&
+        DataSourceManager.getDataSource() == DataSource.sqlite) {
+      return;
+    }
+
     switch (normalizedKey) {
       case 'usersetup':
         await UserSetupApi().syncUserSetup(
@@ -170,6 +184,8 @@ class ApiRouteRegistry {
     ApiSyncProgressHandler? onProgress,
     bool clearExistingData = false,
   }) async {
+    final syncServerData = DataSourceManager.getDataSource() == DataSource.api;
+    final syncCount = syncServerData ? totalSyncCount : totalSyncCount - 6;
     var completedCount = 0;
     var currentTable = 'Data Sync';
 
@@ -181,7 +197,7 @@ class ApiRouteRegistry {
       onProgress?.call(
         ApiSyncProgress(
           completedCount: completedCount,
-          totalCount: totalSyncCount,
+          totalCount: syncCount,
           tableName: tableName,
           isCompleted: isCompleted,
         ),
@@ -319,40 +335,48 @@ class ApiRouteRegistry {
       // 10. SECTION MASTER
       // --------------------------------------------------
 
-      await reportProgress('Users');
-      final usersResult = await UsersApi().syncUsers().timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('Users');
-      await reportProgress('User Groups');
-      final userGroupsResult = await UserSetupApi()
-          .syncUserGroups(clearExistingData: clearExistingData)
-          .timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('User Groups');
-      await reportProgress('User Setup');
-      final userSetupResult = await UserSetupApi()
-          .syncUserSetup(clearExistingData: clearExistingData)
-          .timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('User Setup');
-      await reportProgress('Printers');
-      final printersResult = await PosPrinterApi()
-          .syncPrinters(clearExistingData: clearExistingData)
-          .timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('Printers');
-      await reportProgress('Customer Displays');
-      final customerDisplaysResult = await CustomerDisplayApi()
-          .syncCustomerDisplays(clearExistingData: clearExistingData)
-          .timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('Customer Displays');
-      await reportProgress('Cash Drawers');
-      final cashDrawersResult = await CashDrawerApi()
-          .syncCashDrawers(clearExistingData: clearExistingData)
-          .timeout(syncTimeout);
-      completedCount++;
-      await reportProgress('Cash Drawers');
+      var usersResult = 0;
+      var userGroupsResult = 0;
+      var userSetupResult = 0;
+      var printersResult = 0;
+      var customerDisplaysResult = 0;
+      var cashDrawersResult = 0;
+      if (syncServerData) {
+        await reportProgress('Users');
+        usersResult = await UsersApi().syncUsers().timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('Users');
+        await reportProgress('User Groups');
+        userGroupsResult = await UserSetupApi()
+            .syncUserGroups(clearExistingData: clearExistingData)
+            .timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('User Groups');
+        await reportProgress('User Setup');
+        userSetupResult = await UserSetupApi()
+            .syncUserSetup(clearExistingData: clearExistingData)
+            .timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('User Setup');
+        await reportProgress('Printers');
+        printersResult = await PosPrinterApi()
+            .syncPrinters(clearExistingData: clearExistingData)
+            .timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('Printers');
+        await reportProgress('Customer Displays');
+        customerDisplaysResult = await CustomerDisplayApi()
+            .syncCustomerDisplays(clearExistingData: clearExistingData)
+            .timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('Customer Displays');
+        await reportProgress('Cash Drawers');
+        cashDrawersResult = await CashDrawerApi()
+            .syncCashDrawers(clearExistingData: clearExistingData)
+            .timeout(syncTimeout);
+        completedCount++;
+        await reportProgress('Cash Drawers');
+      }
 
       await reportProgress('Sections');
 

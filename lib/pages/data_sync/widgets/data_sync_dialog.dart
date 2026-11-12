@@ -1,0 +1,227 @@
+part of '../data_sync_page.dart';
+
+class _DataSyncDialogState extends _DataSyncController {
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final layoutType = AppLayoutType.fromContext(context);
+    final isMobile = layoutType.isMobile;
+    final isTablet = layoutType.isTablet;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile
+            ? 16
+            : isTablet
+            ? 56
+            : 40,
+        vertical: isTablet ? 32 : 24,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxDialogHeight =
+              (constraints.maxHeight == double.infinity
+                      ? screenSize.height * 0.9
+                      : constraints.maxHeight)
+                  .clamp(280.0, screenSize.height * 0.9);
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 520 : 420,
+              maxHeight: maxDialogHeight,
+            ),
+            child: Container(
+              key: const ValueKey('data-sync-card'),
+              width: double.infinity,
+              padding: EdgeInsets.all(
+                isTablet
+                    ? 26
+                    : isMobile
+                    ? 20
+                    : 24,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF153C3F),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 18,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Data Sync',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.of(context).pop(),
+                          color: Colors.white,
+                          icon: const Icon(Icons.close_rounded),
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isTablet ? 20 : 16),
+                    Container(
+                      padding: EdgeInsets.all(isTablet ? 16 : 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        _message,
+                        softWrap: true,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isTablet ? 22 : 18),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.sync,
+                          color: const Color(0xFFAFBFC4),
+                          size: isTablet ? 20 : 18,
+                        ),
+                        SizedBox(width: isTablet ? 10 : 8),
+                        Text(
+                          _isSyncing
+                              ? 'Synchronizing...'
+                              : (_syncComplete
+                                    ? 'Completed'
+                                    : (_syncFailed ? 'Failed' : 'Ready')),
+                          style: TextStyle(
+                            color: const Color(0xFFAFBFC4),
+                            fontSize: isTablet ? 13 : 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: isTablet ? 14 : 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        minHeight: 8,
+                        backgroundColor: const Color(0xFF2C5C5F),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFF2D6A2),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isTablet ? 24 : 20),
+                    if (!_isSyncing) ...[
+                      if (_syncComplete)
+                        TextButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.check),
+                          label: const Text('Done'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: GlobalColors.buttonBackground,
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: _startSync,
+                                icon: const Icon(Icons.sync),
+                                label: const Text('Sync'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      GlobalColors.buttonBackground,
+                                  minimumSize: const Size.fromHeight(56),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close),
+                                label: const Text('Cancel'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      GlobalColors.buttonBackground,
+                                  minimumSize: const Size.fromHeight(56),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
