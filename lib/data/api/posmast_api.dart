@@ -84,12 +84,12 @@ class PosMastApi {
     );
   }
 
-  /// Sends fetched POS_Mast rows to the Node API for persistence in its
-  /// Configure [serverSaveUrl] with the POST endpoint that
-  /// accepts `{ "data": [...] }`.
+  /// Inserts missing POS_Mast rows through the configured Node API's /api/pos
+  /// endpoint. Existing counters retain their server configuration.
   Future<PosMastSyncResult> savePosMastRowsOnServer(
     List<Map<String, dynamic>> rows, {
     PosPrinterApi? serverApi,
+    String? defaultReceiptCode,
   }) async {
     final api =
         serverApi ??
@@ -102,12 +102,15 @@ class PosMastApi {
       final counterNo = _readValue(row, 'Counter_No')?.toString().trim() ?? '';
       final counterName =
           _readValue(row, 'Counter_Name')?.toString().trim() ?? '';
-      final receiptCode =
+      final downloadedReceiptCode =
           _readValue(row, 'Receipt_Code')?.toString().trim().isNotEmpty == true
           ? _readValue(row, 'Receipt_Code').toString().trim()
           : _readValue(row, 'Receipt_Prn_Code')?.toString().trim() ?? '';
-      if (counterNo.isEmpty || counterName.isEmpty || receiptCode.isEmpty) {
-        continue;
+      final receiptCode = downloadedReceiptCode.isNotEmpty
+          ? downloadedReceiptCode
+          : defaultReceiptCode?.trim() ?? '';
+      if (counterNo.isEmpty) {
+        throw const FormatException('POS_Mast row is missing Counter_No.');
       }
       final existingRows = await api.getPos(counterNo);
       if (existingRows.any(
@@ -116,6 +119,16 @@ class PosMastApi {
       )) {
         savedCount++;
         continue;
+      }
+      final missingFields = [if (counterName.isEmpty) 'Counter_Name'];
+      if (receiptCode.isEmpty) missingFields.add('Receipt_Code');
+      if (missingFields.isNotEmpty) {
+        throw FormatException(
+          'Counter "$counterNo" is not present in SQL Server and its downloaded '
+          'POS_Mast row is missing: ${missingFields.join(', ')}. '
+          'Fill these fields in the source POS_Mast data and restart setup to '
+          'download it again, or configure this counter on SQL Server and retry.',
+        );
       }
       await api.createPos(
         counterNo: counterNo,
@@ -153,8 +166,9 @@ class PosMastApi {
   Future<PosMastSyncResult> savePosMastRows(
     List<Map<String, dynamic>> rows, {
     bool clearExistingData = false,
+    Database? database,
   }) async {
-    final db = await DBManager.getDatabase(AppDatabase.fudo);
+    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
 
     return db.transaction((txn) async {
       if (clearExistingData) {
@@ -178,7 +192,7 @@ class PosMastApi {
       final counterNo = normalizedRow['Counter_No'];
 
       if (counterNo == null || counterNo.toString().trim().isEmpty) {
-        continue;
+        throw const FormatException('POS_Mast row is missing Counter_No.');
       }
 
       await txn.insert(
@@ -196,7 +210,14 @@ class PosMastApi {
     final normalizedRow = <String, dynamic>{};
 
     for (final column in PosMastPayload.columns) {
-      final value = _readValue(row, column);
+      var value = _readValue(row, column);
+      if (value == null || value.toString().trim().isEmpty) {
+        if (column == 'Receipt_Prn_Code') {
+          value = _readValue(row, 'Receipt_Code') ?? value;
+        } else if (column == 'Customer_Display_Code') {
+          value = _readValue(row, 'Cus_Display_Code') ?? value;
+        }
+      }
       if (value != null) {
         normalizedRow[column] = value;
       }
@@ -220,7 +241,9 @@ class PosMastApi {
   }
 
   String _normalizeKey(String value) {
-    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    final key = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    // The source API spells this column "reciept_prn_code".
+    return key == 'recieptprncode' ? 'receiptprncode' : key;
   }
 }
 
@@ -318,7 +341,8 @@ class PosMastPayload {
   }
 
   static String _normalizeKey(String value) {
-    return value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    final key = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+    return key == 'recieptprncode' ? 'receiptprncode' : key;
   }
 }
 

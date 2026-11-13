@@ -1,12 +1,15 @@
-import 'package:sqflite/sqflite.dart';
 import '../../core/config/server_settings.dart';
-import '../database/db_manager.dart';
 import '../../functions/uservalidation/app_functions.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../api/api_http_client.dart';
+
+class UserGroupAlreadyExistsException implements Exception {
+  @override
+  String toString() => 'User Group already exists';
+}
 
 class UserSetupApi {
   UserSetupApi({http.Client? client, String? baseUrl})
@@ -45,10 +48,7 @@ class UserSetupApi {
     return rows;
   }
 
-  Future<int> syncUserSetup({
-    bool clearExistingData = false,
-    Database? database,
-  }) async {
+  Future<int> syncUserSetup({bool clearExistingData = false}) async {
     final baseUrl = _baseUrl.isNotEmpty
         ? _baseUrl
         : await ServerSettings.getBaseUrl();
@@ -56,56 +56,10 @@ class UserSetupApi {
       client: _client,
       baseUrl: baseUrl,
     ).getUserSetup();
-    const table = 'User_setup';
-    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
-    return db.transaction((txn) async {
-      final schema = await txn.rawQuery('PRAGMA table_info("$table")');
-      if (schema.isEmpty) throw StateError('Missing SQLite table $table.');
-      final columns = schema.map((c) => c['name'] as String).toList();
-      final keys = schema
-          .where((c) => (c['pk'] as int) > 0)
-          .map((c) => c['name'] as String)
-          .toList();
-      if (keys.isEmpty) throw StateError('$table has no primary key.');
-      if (clearExistingData) {
-        await txn.delete(
-          table,
-          where: 'Screen_ID IN (?, ?)',
-          whereArgs: _screenIds,
-        );
-      }
-      for (final row in rows) {
-        final fields = {
-          for (final e in row.entries) e.key.toLowerCase(): e.value,
-        };
-        final values = <String, Object?>{
-          for (final column in columns)
-            if (fields.containsKey(column.toLowerCase()))
-              column: fields[column.toLowerCase()] is bool
-                  ? (fields[column.toLowerCase()] == true ? 1 : 0)
-                  : fields[column.toLowerCase()],
-        };
-        for (final key in keys) {
-          if (values[key] == null || values[key].toString().trim().isEmpty) {
-            throw FormatException('$table server row is missing $key.');
-          }
-        }
-        final updated = await txn.update(
-          table,
-          values,
-          where: keys.map((key) => '"$key" = ?').join(' AND '),
-          whereArgs: keys.map((key) => values[key]).toList(),
-        );
-        if (updated == 0) await txn.insert(table, values);
-      }
-      return rows.length;
-    });
+    return rows.length;
   }
 
-  Future<int> syncUserGroups({
-    bool clearExistingData = false,
-    Database? database,
-  }) async {
+  Future<int> syncUserGroups({bool clearExistingData = false}) async {
     final baseUrl = _baseUrl.isNotEmpty
         ? _baseUrl
         : await ServerSettings.getBaseUrl();
@@ -113,44 +67,29 @@ class UserSetupApi {
       client: _client,
       baseUrl: baseUrl,
     ).getUserGroups();
-    const table = 'User_Group';
-    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
-    return db.transaction((txn) async {
-      final schema = await txn.rawQuery('PRAGMA table_info("$table")');
-      if (schema.isEmpty) throw StateError('Missing SQLite table $table.');
-      final columns = schema.map((c) => c['name'] as String).toList();
-      final keys = schema
-          .where((c) => (c['pk'] as int) > 0)
-          .map((c) => c['name'] as String)
-          .toList();
-      if (keys.isEmpty) throw StateError('$table has no primary key.');
-      if (clearExistingData) await txn.delete(table);
-      for (final row in rows) {
-        final fields = {
-          for (final e in row.entries) e.key.toLowerCase(): e.value,
-        };
-        final values = <String, Object?>{
-          for (final column in columns)
-            if (fields.containsKey(column.toLowerCase()))
-              column: fields[column.toLowerCase()] is bool
-                  ? (fields[column.toLowerCase()] == true ? 1 : 0)
-                  : fields[column.toLowerCase()],
-        };
-        for (final key in keys) {
-          if (values[key] == null || values[key].toString().trim().isEmpty) {
-            throw FormatException('$table server row is missing $key.');
-          }
-        }
-        final updated = await txn.update(
-          table,
-          values,
-          where: keys.map((key) => '"$key" = ?').join(' AND '),
-          whereArgs: keys.map((key) => values[key]).toList(),
-        );
-        if (updated == 0) await txn.insert(table, values);
-      }
-      return rows.length;
+    return rows.length;
+  }
+
+  Future<void> createUserSetup({
+    required String groupCode,
+    required String functionId,
+    required String screenId,
+    required int accessLevel,
+  }) async {
+    if (groupCode.trim().isEmpty ||
+        functionId.trim().isEmpty ||
+        screenId.trim().isEmpty) {
+      throw ArgumentError(
+        'Group Code, Function ID and Screen ID are required.',
+      );
+    }
+    final response = await _post('/user-setup', {
+      'Group_Code': groupCode,
+      'Function_ID': functionId,
+      'Screen_ID': screenId,
+      'Access_Level': accessLevel,
     });
+    _payloadFromResponse(response, 'Create user setup');
   }
 
   Future<List<Map<String, dynamic>>> getUserSetupByGroupScreen({
@@ -161,6 +100,23 @@ class UserSetupApi {
       'Group_Code': groupCode,
       'Screen_ID': screenId,
     });
+    // This API reports an empty permission set as a domain-specific 404.
+    // Keep missing routes and other server errors visible to callers.
+    if (response.statusCode == 404) {
+      try {
+        final payload = jsonDecode(response.body);
+        if (payload is Map &&
+            (payload['message'] ?? payload['error'])
+                    ?.toString()
+                    .trim()
+                    .toLowerCase() ==
+                'no user setup records found for this group and screen') {
+          return [];
+        }
+      } on FormatException {
+        // The standard handler below reports non-JSON errors.
+      }
+    }
     return _rowsFromResponse(response, 'Get user setup by group and screen');
   }
 
@@ -193,6 +149,17 @@ class UserSetupApi {
       'Group_Name': groupName,
       'Group_Descr': groupDescr,
     });
+    try {
+      final payload = jsonDecode(response.body);
+      if (payload is Map &&
+          payload['success'] == false &&
+          payload['message']?.toString().trim().toLowerCase() ==
+              'user group already exists') {
+        throw UserGroupAlreadyExistsException();
+      }
+    } on FormatException {
+      // Let the standard response handler report invalid server responses.
+    }
     _payloadFromResponse(response, 'Create user group');
   }
 
@@ -236,7 +203,20 @@ class UserSetupApi {
     String operation,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('$operation failed with status ${response.statusCode}.');
+      String detail = '';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map) {
+          final message = body['message'] ?? body['error'];
+          if (message is String) detail = message;
+        }
+      } on FormatException {
+        // HTML or empty error responses have no API message to display.
+      }
+      throw Exception(
+        '$operation failed (HTTP ${response.statusCode})'
+        '${detail.isEmpty ? '.' : ': $detail'}',
+      );
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {

@@ -5,9 +5,8 @@ import 'package:fudo_v2/data/database/db_manager.dart';
 import 'package:fudo_v2/data/server/users_api.dart';
 
 class AuthService {
-  AuthService({UsersApi? usersApi, ValidUserApi? validUserApi})
-    : _usersApi = usersApi,
-      _validUserApi = validUserApi ?? ValidUserApi();
+  AuthService({this._usersApi, ValidUserApi? validUserApi})
+    : _validUserApi = validUserApi ?? ValidUserApi();
 
   final UsersApi? _usersApi;
   final ValidUserApi _validUserApi;

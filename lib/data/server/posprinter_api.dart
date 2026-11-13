@@ -1,6 +1,4 @@
-import 'package:sqflite/sqflite.dart';
 import '../../core/config/server_settings.dart';
-import '../database/db_manager.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -15,6 +13,38 @@ class PosPrinterApi {
   final http.Client _client;
   final String _baseUrl;
 
+  Future<void> createPrinter({
+    required String printerCode,
+    required String printerName,
+    required String printerPath,
+    required int printerPort,
+    required String printerType,
+    required String printerModel,
+  }) async {
+    final response = await _client.post(
+      _uri('/printer'),
+      headers: const {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'Printer_Code': printerCode,
+        'Printer_Name': printerName,
+        'Printer_Path': printerPath,
+        'Printer_Port': printerPort,
+        'Printer_Type': printerType,
+        'Printer_Model': printerModel,
+      }),
+    );
+    _ensureSuccess(response, 'Create printer');
+    final payload = jsonDecode(response.body);
+    if (payload is! Map || payload['success'] != true) {
+      throw Exception(
+        'Create printer failed: ${payload is Map ? payload['message'] ?? 'unknown error' : 'invalid response'}',
+      );
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getPrinters() async {
     final response = await _client.get(
       _uri('/printers'),
@@ -23,10 +53,7 @@ class PosPrinterApi {
     return _rowsFromResponse(response, 'Get Print_Mast');
   }
 
-  Future<int> syncPrinters({
-    bool clearExistingData = false,
-    Database? database,
-  }) async {
+  Future<int> syncPrinters({bool clearExistingData = false}) async {
     final baseUrl = _baseUrl.isNotEmpty
         ? _baseUrl
         : await ServerSettings.getBaseUrl();
@@ -34,44 +61,7 @@ class PosPrinterApi {
       client: _client,
       baseUrl: baseUrl,
     ).getPrinters();
-    const table = 'Print_Mast';
-    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
-    return db.transaction((txn) async {
-      final schema = await txn.rawQuery('PRAGMA table_info("$table")');
-      if (schema.isEmpty) throw StateError('Missing SQLite table $table.');
-      final columns = schema.map((c) => c['name'] as String).toList();
-      final keys = schema
-          .where((c) => (c['pk'] as int) > 0)
-          .map((c) => c['name'] as String)
-          .toList();
-      if (keys.isEmpty) throw StateError('$table has no primary key.');
-      if (clearExistingData) await txn.delete(table);
-      for (final row in rows) {
-        final fields = {
-          for (final e in row.entries) e.key.toLowerCase(): e.value,
-        };
-        final values = <String, Object?>{
-          for (final column in columns)
-            if (fields.containsKey(column.toLowerCase()))
-              column: fields[column.toLowerCase()] is bool
-                  ? (fields[column.toLowerCase()] == true ? 1 : 0)
-                  : fields[column.toLowerCase()],
-        };
-        for (final key in keys) {
-          if (values[key] == null || values[key].toString().trim().isEmpty) {
-            throw FormatException('$table server row is missing $key.');
-          }
-        }
-        final updated = await txn.update(
-          table,
-          values,
-          where: keys.map((key) => '"$key" = ?').join(' AND '),
-          whereArgs: keys.map((key) => values[key]).toList(),
-        );
-        if (updated == 0) await txn.insert(table, values);
-      }
-      return rows.length;
-    });
+    return rows.length;
   }
 
   Future<List<Map<String, dynamic>>> getPos(String counterNo) async {
@@ -92,7 +82,7 @@ class PosPrinterApi {
     final body = <String, dynamic>{
       'Counter_No': counterNo,
       'Counter_Name': counterName,
-      'Receipt_Prn_Code': receiptCode,
+      'Reciept_Prn_Code': receiptCode,
       'Cash_Drawer_Code': cashDrawerCode ?? '',
       'Customer_Display_Code': customerDisplayCode ?? '',
     };
@@ -104,7 +94,7 @@ class PosPrinterApi {
       },
       body: jsonEncode(body),
     );
-    _ensureSuccess(response, 'Create POS');
+    _ensureSuccess(response, 'Create POS (counter "$counterNo")');
     final payload = jsonDecode(response.body);
     if (payload is Map && payload['success'] == false) {
       throw Exception(
@@ -148,7 +138,24 @@ class PosPrinterApi {
 
   void _ensureSuccess(http.Response response, String operation) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('$operation failed with status ${response.statusCode}.');
+      var detail = response.body.trim();
+      try {
+        final payload = jsonDecode(detail);
+        if (payload is Map) {
+          final errors = [
+            for (final key in ['message', 'error', 'errors', 'detail'])
+              if (payload[key] != null) payload[key].toString(),
+          ];
+          if (errors.isNotEmpty) detail = errors.join('; ');
+        }
+      } on FormatException {
+        // Some servers return plain text instead of a JSON error body.
+      }
+      if (detail.length > 1200) detail = '${detail.substring(0, 1200)}...';
+      throw Exception(
+        '$operation failed with status ${response.statusCode}. '
+        '${detail.isEmpty ? "The server returned no error details." : detail}',
+      );
     }
   }
 }

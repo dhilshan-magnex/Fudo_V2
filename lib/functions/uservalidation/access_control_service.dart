@@ -1,4 +1,5 @@
 import '../../data/database/db_manager.dart';
+import '../../data/server/usersetup_api.dart';
 
 class AccessControlService {
   AccessControlService._();
@@ -12,6 +13,24 @@ class AccessControlService {
     // per-screen row in a locally cached desktop database.
     if (_isAdministratorGroup(groupCode)) {
       return true;
+    }
+
+    if (DataSourceManager.getDataSource() == DataSource.api) {
+      final rows = await UserSetupApi().getUserSetupByGroupScreen(
+        groupCode: groupCode.trim(),
+        screenId: screenId.trim(),
+      );
+      for (final row in rows) {
+        final fields = {
+          for (final entry in row.entries) entry.key.toLowerCase(): entry.value,
+        };
+        if (fields['function_id']?.toString().trim().toUpperCase() ==
+            functionId.trim().toUpperCase()) {
+          final access = fields['access_lvl'] ?? fields['access_level'];
+          return access == true || access?.toString().trim() == '1';
+        }
+      }
+      return false;
     }
 
     final database = await DBManager.getDatabase(AppDatabase.fudo);

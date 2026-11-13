@@ -1,3 +1,5 @@
+import 'dummy_data_results_dialog.dart';
+import 'setup_sync_results_dialog.dart';
 import 'dart:async';
 
 import 'package:http/http.dart' as http;
@@ -14,6 +16,7 @@ import 'package:fudo_v2/data/api/posmast_api.dart';
 import 'package:fudo_v2/data/api/shopinfo_api.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
+import 'package:fudo_v2/data/dummy_data.dart';
 import 'package:fudo_v2/data/server/users_api.dart';
 import 'package:fudo_v2/pages/counter_selection_page.dart';
 import 'package:fudo_v2/pages/login_page.dart';
@@ -84,9 +87,34 @@ class _StartupGateState extends State<StartupGate> {
 
   Future<void> _finishInitialSetup(Map<String, dynamic> selectedCounter) async {
     final client = await DBManager.getClientInfo();
-    if (DataSourceManager.getDataSource(client!['Client_Type'].toString()) ==
+    if (client == null) throw StateError('App license is missing.');
+    // CounterSelectionPage has already saved Counter_Info in Sys.db.
+    List<DummyTableResult> seedResults = [];
+    Object? seedError;
+    try {
+      await DummyData.insert(
+        clientType: client['Client_Type'].toString(),
+        onResult: (results) => seedResults = results,
+      );
+    } catch (error) {
+      seedError = error;
+    }
+    if (!mounted) throw StateError('Setup screen was closed.');
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => DummyDataResultsDialog(
+        results: seedResults,
+        failed: seedError != null,
+        destination: client['Client_Type'].toString().trim() == '1'
+            ? 'SQLite'
+            : 'SQL Server',
+      ),
+    );
+    if (seedError != null) throw seedError;
+    if (!mounted) throw StateError('Setup screen was closed.');
+    if (DataSourceManager.getDataSource(client['Client_Type'].toString()) ==
         DataSource.api) {
-      await PosMastApi().savePosMastRowsOnServer([selectedCounter]);
       await UsersApi().syncUsers();
       await UserSetupApi().syncUserGroups(clearExistingData: true);
       await UserSetupApi().syncUserSetup(clearExistingData: true);
@@ -126,6 +154,9 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
   String? _loadError;
   List<Map<String, dynamic>>? _setupRows;
   String? _setupLocationId;
+  final List<String> _syncResults = [];
+  String? _syncClientType;
+  String _syncStep = '';
 
   @override
   void initState() {
@@ -171,14 +202,30 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    _syncResults.clear();
+    _syncStep = 'Client validation / API connection';
     try {
       if (_setupRows != null) {
         final baseUrl = _nodeApiBaseUrl(_nodeApiController.text);
-        // Check connectivity while the address is still editable. Inserts
-        // into User_File happen only after the selected counter is saved.
         await UsersApi(baseUrl: baseUrl).getUsers();
         await ServerSettings.saveBaseUrl(baseUrl);
-        // Keep the fetched rows in memory; upload only after counter selection.
+        _syncResults.add(
+          'POS_Mast GET: Success - ${_setupRows!.length} rows retrieved.',
+        );
+        _syncStep = 'POS_Mast POST / SQL Server';
+        final saved = await PosMastApi().savePosMastRowsOnServer(
+          _setupRows!,
+          serverApi: PosPrinterApi(baseUrl: baseUrl),
+        );
+        _syncResults.add(
+          'POS_Mast POST / SQL Server: Success - ${saved.savedCount} counters saved or already present. Existing counters are not posted again.',
+        );
+        if (!mounted) return;
+        await showSetupSyncResults(
+          context,
+          clientType: _syncClientType,
+          results: _syncResults,
+        );
         if (!mounted) return;
         widget.onSaved(
           _setupRows!
@@ -199,6 +246,7 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       }
 
       await DBManager.setInitialSetupComplete(false);
+      _syncStep = 'App_License GET / save to Sys.db';
       final licenseResult = await AppLicenseApi().syncAppLicense(
         clientId: clientId,
         locationId: locationId,
@@ -207,11 +255,17 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
       if (licenseResult.savedCount == 0) {
         throw StateError('App License API returned no valid license data.');
       }
+      _syncResults.add(
+        'App_License GET / Sys.db save: Success — ${licenseResult.savedCount} rows saved.',
+      );
+      _syncStep = 'Client type validation';
       final clientInfo = await DBManager.getClientInfo();
       final clientType = clientInfo?['Client_Type']?.toString().trim();
+      _syncClientType = clientType;
       if (clientType != '1' && clientType != '2') {
         throw StateError('App license has an unsupported Client_Type.');
       }
+      _syncStep = 'POS_Mast GET';
       final rows = await PosMastApi().fetchPosMast(
         clientId: clientId,
         locationId: locationId,
@@ -220,7 +274,23 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         throw StateError('POS_Mast API returned no counters to select.');
       }
       if (clientType == '1') {
-        await PosMastApi().savePosMastRows(rows, clearExistingData: true);
+        _syncResults.add(
+          'POS_Mast GET: Success — ${rows.length} rows retrieved.',
+        );
+        _syncStep = 'POS_Mast save to Fudo.db';
+        final saved = await PosMastApi().savePosMastRows(
+          rows,
+          clearExistingData: true,
+        );
+        _syncResults.add(
+          'POS_Mast / Fudo.db save: Success — ${saved.savedCount} rows saved (SQLite insert).',
+        );
+        if (!mounted) return;
+        await showSetupSyncResults(
+          context,
+          clientType: clientType,
+          results: _syncResults,
+        );
         if (!mounted) return;
         widget.onSaved(
           rows
@@ -231,13 +301,25 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
         return;
       }
       if (!mounted) return;
+      _syncResults.add(
+        'POS_Mast GET: Success — ${rows.length} rows retrieved.',
+      );
+      _syncResults.add(
+        'POS_Mast POST / SQL Server: Pending — runs after saving the API address, before counter selection.',
+      );
+      await showSetupSyncResults(
+        context,
+        clientType: clientType,
+        results: _syncResults,
+      );
+      if (!mounted) return;
       setState(() {
         _setupRows = rows;
         _setupLocationId = locationId;
         _saving = false;
       });
     } on http.ClientException {
-      _showSaveError(
+      await _showSaveError(
         _setupRows == null
             ? 'Cannot connect to the license service. Check your internet connection and retry.'
             : 'Cannot connect to ${_nodeApiBaseUrl(_nodeApiController.text)}. '
@@ -245,21 +327,25 @@ class _InitialSetupPageState extends State<InitialSetupPage> {
                   'this device can reach it on the network.',
       );
     } on TimeoutException {
-      _showSaveError(
+      await _showSaveError(
         'The API server did not respond in time. '
         'Check the server address, network connection, and firewall, then retry.',
       );
     } catch (error) {
-      _showSaveError('Could not save setup: $error');
+      await _showSaveError('Could not save setup: $error');
     }
   }
 
-  void _showSaveError(String message) {
+  Future<void> _showSaveError(String message) async {
+    if (!mounted) return;
+    await showSetupSyncResults(
+      context,
+      clientType: _syncClientType,
+      results: _syncResults,
+      error: '$_syncStep failed: $message',
+    );
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

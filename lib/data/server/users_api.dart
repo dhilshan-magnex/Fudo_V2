@@ -2,10 +2,8 @@ import 'package:fudo_v2/core/config/server_settings.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:sqflite/sqflite.dart';
 
 import '../api/api_http_client.dart';
-import '../database/db_manager.dart';
 
 class UsersApi {
   UsersApi({http.Client? client, String? baseUrl})
@@ -15,48 +13,13 @@ class UsersApi {
   final http.Client _client;
   final String _baseUrl;
 
-  /// Merges server users without deleting local accounts or omitted passwords.
-  Future<int> syncUsers({Database? database}) async {
+  /// Fetches server users without persisting a local copy.
+  Future<int> syncUsers() async {
     final baseUrl = _baseUrl.isNotEmpty
         ? _baseUrl
         : await ServerSettings.getBaseUrl();
     final rows = await UsersApi(client: _client, baseUrl: baseUrl).getUsers();
-    final db = database ?? await DBManager.getDatabase(AppDatabase.fudo);
-    return db.transaction((txn) async {
-      final schema = await txn.rawQuery('PRAGMA table_info(User_File)');
-      final columns = schema.map((column) => column['name'] as String);
-      for (final row in rows) {
-        final fields = {
-          for (final entry in row.entries) entry.key.toLowerCase(): entry.value,
-        };
-        final values = <String, Object?>{
-          for (final column in columns)
-            if (fields.containsKey(column.toLowerCase()))
-              column: fields[column.toLowerCase()] is bool
-                  ? (fields[column.toLowerCase()] == true ? 1 : 0)
-                  : fields[column.toLowerCase()],
-        };
-        final userId = values['User_ID'];
-        if (userId == null || userId.toString().trim().isEmpty) {
-          throw const FormatException('Server user is missing User_ID.');
-        }
-        // User-list responses may omit or redact credentials. Only replace a
-        // saved password when the server supplies a non-empty value.
-        values.removeWhere(
-          (key, value) =>
-              key.toLowerCase() == 'user_pwd' &&
-              (value == null || value.toString().isEmpty),
-        );
-        final updated = await txn.update(
-          'User_File',
-          values,
-          where: 'User_ID = ?',
-          whereArgs: [userId],
-        );
-        if (updated == 0) await txn.insert('User_File', values);
-      }
-      return rows.length;
-    });
+    return rows.length;
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -115,7 +78,20 @@ class UsersApi {
     String operation,
   ) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('$operation failed with status ${response.statusCode}.');
+      String detail = '';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map) {
+          final message = body['message'] ?? body['error'];
+          if (message is String) detail = message;
+        }
+      } on FormatException {
+        // HTML or empty error responses have no API message to display.
+      }
+      throw Exception(
+        '$operation failed (HTTP ${response.statusCode})'
+        '${detail.isEmpty ? '.' : ': $detail'}',
+      );
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
