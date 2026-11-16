@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:fudo_v2/data/server/usersetup_api.dart';
+import 'package:fudo_v2/data/sqlserver/usersetup_api.dart';
 
 void main() {
   for (final response in [

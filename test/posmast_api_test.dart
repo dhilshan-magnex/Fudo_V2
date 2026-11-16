@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:fudo_v2/data/api/posmast_api.dart';
-import 'package:fudo_v2/data/server/posprinter_api.dart';
+import 'package:fudo_v2/data/sqlserver/posprinter_api.dart';
 
 void main() {
   test(

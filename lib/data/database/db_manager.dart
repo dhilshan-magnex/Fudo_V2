@@ -3,7 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:fudo_v2/core/session/session_provider.dart';
-import '../server/users_api.dart';
+import '../sqlserver/users_api.dart';
 
 // Client type 1 uses local SQLite; client type 2 uses the server API.
 enum DataSource { sqlite, api }

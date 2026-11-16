@@ -2,7 +2,7 @@ import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
-import 'package:fudo_v2/data/server/users_api.dart';
+import 'package:fudo_v2/data/sqlserver/users_api.dart';
 
 class AuthService {
   AuthService({this._usersApi, ValidUserApi? validUserApi})

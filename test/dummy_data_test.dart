@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:fudo_v2/data/dummy_data.dart';
+import 'package:fudo_v2/data/database/dummy_data.dart';
 
 void main() {
   for (final confirmed in [true, false]) {

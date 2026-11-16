@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/config/api_config.dart';
 import '../../core/config/server_settings.dart';
 import '../database/db_manager.dart';
-import '../server/shopinfo_api.dart' as server;
+import '../sqlserver/shopinfo_api.dart' as server;
 
 class ShopInfoApi {
   ShopInfoApi({http.Client? client})

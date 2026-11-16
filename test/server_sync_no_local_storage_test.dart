@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:fudo_v2/data/server/cashdrawer_api.dart';
-import 'package:fudo_v2/data/server/customerdisplay_api.dart';
-import 'package:fudo_v2/data/server/posprinter_api.dart';
-import 'package:fudo_v2/data/server/users_api.dart';
-import 'package:fudo_v2/data/server/usersetup_api.dart';
+import 'package:fudo_v2/data/sqlserver/cashdrawer_api.dart';
+import 'package:fudo_v2/data/sqlserver/customerdisplay_api.dart';
+import 'package:fudo_v2/data/sqlserver/posprinter_api.dart';
+import 'package:fudo_v2/data/sqlserver/users_api.dart';
+import 'package:fudo_v2/data/sqlserver/usersetup_api.dart';
 
 void main() {
   test(

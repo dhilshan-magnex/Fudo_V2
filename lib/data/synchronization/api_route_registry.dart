@@ -1,7 +1,7 @@
-import '../server/posprinter_api.dart';
-import '../server/usersetup_api.dart';
-import '../server/customerdisplay_api.dart';
-import '../server/cashdrawer_api.dart';
+import '../sqlserver/posprinter_api.dart';
+import '../sqlserver/usersetup_api.dart';
+import '../sqlserver/customerdisplay_api.dart';
+import '../sqlserver/cashdrawer_api.dart';
 import 'dart:developer' as developer;
 
 import '../api/applicense_api.dart';
@@ -20,7 +20,7 @@ import '../api/tablelayout_api.dart';
 import '../api/taxgroup_api.dart';
 import '../api/taxmaster_api.dart';
 import '../database/db_manager.dart';
-import '../server/users_api.dart';
+import '../sqlserver/users_api.dart';
 
 typedef ApiSyncProgressHandler = void Function(ApiSyncProgress progress);
 

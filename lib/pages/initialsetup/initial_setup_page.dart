@@ -4,10 +4,10 @@ import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
-import '../data/server/posprinter_api.dart';
-import '../data/server/usersetup_api.dart';
-import '../data/server/customerdisplay_api.dart';
-import '../data/server/cashdrawer_api.dart';
+import '../../data/sqlserver/posprinter_api.dart';
+import '../../data/sqlserver/usersetup_api.dart';
+import '../../data/sqlserver/customerdisplay_api.dart';
+import '../../data/sqlserver/cashdrawer_api.dart';
 import 'package:fudo_v2/core/config/server_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:fudo_v2/core/theme/global_colors.dart';
@@ -16,9 +16,9 @@ import 'package:fudo_v2/data/api/posmast_api.dart';
 import 'package:fudo_v2/data/api/shopinfo_api.dart';
 import 'package:fudo_v2/data/api/validuser_api.dart';
 import 'package:fudo_v2/data/database/db_manager.dart';
-import 'package:fudo_v2/data/dummy_data.dart';
-import 'package:fudo_v2/data/server/users_api.dart';
-import 'package:fudo_v2/pages/counter_selection_page.dart';
+import 'package:fudo_v2/data/database/dummy_data.dart';
+import 'package:fudo_v2/data/sqlserver/users_api.dart';
+import 'package:fudo_v2/pages/initialsetup/counter_selection_page.dart';
 import 'package:fudo_v2/pages/login_page.dart';
 
 class StartupGate extends StatefulWidget {

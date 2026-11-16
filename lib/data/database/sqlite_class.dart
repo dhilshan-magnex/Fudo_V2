@@ -1,5 +1,5 @@
 import '../synchronization/api_route_registry.dart';
-import '../database/db_manager.dart';
+import 'db_manager.dart';
 
 class SQLiteClass {
 

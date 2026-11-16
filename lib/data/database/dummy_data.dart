@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:http/http.dart' as http;
 
-import '../core/config/server_settings.dart';
-import '../functions/uservalidation/app_functions.dart';
-import 'database/db_manager.dart';
-import 'server/users_api.dart';
-import 'server/usersetup_api.dart';
-import 'server/customerdisplay_api.dart';
-import 'server/cashdrawer_api.dart';
-import 'server/posprinter_api.dart';
+import '../../core/config/server_settings.dart';
+import '../../functions/uservalidation/app_functions.dart';
+import 'db_manager.dart';
+import '../sqlserver/users_api.dart';
+import '../sqlserver/usersetup_api.dart';
+import '../sqlserver/customerdisplay_api.dart';
+import '../sqlserver/cashdrawer_api.dart';
+import '../sqlserver/posprinter_api.dart';
 
 class DummyTableResult {
   DummyTableResult(this.table);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/global_colors.dart';
-import '../data/dummy_data.dart';
+import '../../core/theme/global_colors.dart';
+import '../../data/database/dummy_data.dart';
 
 class DummyDataResultsDialog extends StatelessWidget {
   const DummyDataResultsDialog({

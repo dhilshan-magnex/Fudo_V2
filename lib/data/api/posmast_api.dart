@@ -6,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/config/api_config.dart';
 import '../../core/session/session_provider.dart';
 import '../database/db_manager.dart';
-import '../server/posprinter_api.dart';
+import '../sqlserver/posprinter_api.dart';
 
 class PosMastApi {
   PosMastApi({http.Client? client})
